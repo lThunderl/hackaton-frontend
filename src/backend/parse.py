@@ -10,6 +10,7 @@ def parse_hh_vacancies(pages=1):
         vacancy_elements = []
         vacancy_salary = []
         vacancy_exp = []
+        search_line = []
 
         for page in range(pages):
             params = {
@@ -39,16 +40,16 @@ def parse_hh_vacancies(pages=1):
                 links.append(link.get('href'))
                 break
 
-            #for vacancy, salary, exp in zip(vacancy_elements, vacancy_salary, vacancy_exp):
-            #    print (f"Вакансия: {vacancy.get_text()}")
-            #    if (salary.get_text().find("месяц") == -1):
-            #        print("ЗП не указано")
-            #    else: 
-            #        print(f"ЗП: {salary.get_text()}")
-            #    if (exp.get_text().find("опыт") and exp.get_text().find("Опыт") == -1):
-            #        print("Не указан опыт")
-            #    else:
-            #        print(f"Опыт: {exp.get_text()}")
+            for vacancy, salary, exp in zip(vacancy_elements, vacancy_salary, vacancy_exp):
+                print (f"Вакансия: {vacancy.get_text()}")
+                if (salary.get_text().find("месяц") == -1):
+                    print("ЗП не указано")
+                else: 
+                    print(f"ЗП: {salary.get_text()}")
+                if (exp.get_text().find("опыт") and exp.get_text().find("Опыт") == -1):
+                    print("Не указан опыт")
+                else:
+                    print(f"Опыт: {exp.get_text()}")
     return links
 
 
@@ -69,7 +70,7 @@ def parse_skills_vacancy(links):
         return skills
 
 if __name__ == '__main__':
-    vacancies = parse_hh_vacancies(pages=1)
+    vacancies = parse_hh_vacancies(pages=2)
     parse_skills_vacancy(vacancies)
     for vacancie in vacancies:
         vacancie = {"vacancie: f{vacancie}"}
