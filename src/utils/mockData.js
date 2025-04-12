@@ -1,21 +1,48 @@
+export const mockCompetencies = [
+    {
+        id: 1,
+        name: 'Git'
+    },
+    {
+        id: 2,
+        name: 'NodeJS'
+    },
+    {
+        id: 3,
+        name: 'Machine Learning'
+    },
+    {
+        id: 4,
+        name: 'MongoDB'
+    },
+    {
+        id: 5,
+        name: 'React'
+    },
+    {
+        id: 6,
+        name: 'Python'
+    },
+]
+
 export const mockVacancies = [
     {
         id: 1,
         title: 'Senior Frontend Developer',
         description: 'Looking for an experienced frontend developer to join our team.',
-        requirements: ['Vue.js', 'JavaScript', 'HTML', 'CSS', 'Git'],
+        competencies: ['Vue.js', 'JavaScript', 'HTML', 'CSS', 'Git'],
     },
     {
         id: 2,
         title: 'Backend Engineer',
         description: 'Seeking a skilled backend engineer proficient in Node.js and databases.',
-        requirements: ['Node.js', 'Express.js', 'PostgreSQL', 'REST APIs'],
+        competencies: ['Node.js', 'Express.js', 'PostgreSQL', 'REST APIs'],
     },
     {
         id: 3,
         title: 'DevOps Engineer',
         description: 'Looking for a DevOps Engineer to join our team.',
-        requirements: ['Docker', 'Kubernetes', 'AWS', 'CI/CD'],
+        competencies: ['Docker', 'Kubernetes', 'AWS', 'CI/CD'],
     },
 ];
 

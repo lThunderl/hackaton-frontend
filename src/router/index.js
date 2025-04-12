@@ -1,6 +1,9 @@
 import {createRouter, createWebHistory} from 'vue-router';
-import VacancyList from '@/components/Lists/VacancyList.vue'
+
 import DemoVue from "@/components/DemoVue.vue";
+
+import VacancyList from '@/components/VacancyViews/VacancyList.vue'
+import CreateVacancy from "@/components/VacancyViews/CreateVacancy.vue";
 
 const routes = [
     {
@@ -12,6 +15,11 @@ const routes = [
         path: '/hr-page',
         name: 'HRPage',
         component: VacancyList,
+    },
+    {
+        path: '/create-vacancy',
+        name: 'CreateVacancy',
+        component: CreateVacancy,
     },
 ];
 
