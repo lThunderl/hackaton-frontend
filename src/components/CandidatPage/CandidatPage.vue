@@ -1,28 +1,15 @@
 <script>
 export default {
-  components: { PagesButton, DragAndDrop },
+  components: { DragAndDrop },
 }
 </script>
 <script setup>
-import { onMounted } from 'vue';
-import PagesButton from './PagesButton.vue';
 import DragAndDrop from './DragAndDrop.vue';
 
-onMounted(() =>{
-    if(localStorage.getItem('value') != null){
-      document.querySelector('textarea.textSkills').value = localStorage.getItem('value');
-    }
-    })
 </script>
 
 <template>
-  <div class="background">
-    <div class="bubble"> </div>
-    <div class="pagesButtons" >
-      <PagesButton v-for="(page, index) in pages" :key="index"/>
-    </div>
     <DragAndDrop />
-  </div>
   </template>
 
 <style>
@@ -32,7 +19,7 @@ onMounted(() =>{
   html{
     overflow-x: hidden;
     font-family: "Montserrat";
-    font-size: calc(0.3em + 1vw)
+    font-size: calc(0.1em + 0.7vw + 0.7vh)
   }
 
 
@@ -43,7 +30,6 @@ onMounted(() =>{
 
 body{
   display: block;
-  background-color: #2e2d2d;
 }
 .bubble{
   background-color: rgb(156, 156, 156);

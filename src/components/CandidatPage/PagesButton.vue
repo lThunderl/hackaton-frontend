@@ -13,7 +13,7 @@ export default{
 </template>
 <style scoped>
 .pageButton{
-  width: calc(0.5em + 0.5vw);
+  width: calc(0.1em + 0.5vw + 0.5vh);
   height: calc(0.5em + 0.5vw);
   border-radius: 50%;
   margin-left: 10px;

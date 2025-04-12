@@ -1,4 +1,15 @@
 <script>
+import {
+  dragOver,
+  drop,
+  openFileDialog,
+  onFileSelected,
+  removeFile,
+  uploadFiles,
+  handleTextUpload,
+  handleFiles,
+} from '../../service/candidate.service.js';
+
 export default {
     data() {
         return {
@@ -8,284 +19,179 @@ export default {
             text: '',
             first_name: '',
             second_name: '',
+            isHovered: false,
+            uploadText: 'Перетащите сюда ваше резюме',
         }
     },
-  computed:{
-    validFileType(){
-      if (!this.file) return true;
-      
-      const allowedTypes = ['.docx', '.pdf'];
-      const fileExtensions = '.' + this.file.name.split('.').pop().toLowerCase();
-      return allowedTypes.includes(fileExtensions);
-    },
-    //DropHover(){
-    //    const 
-    //}
-  },
   methods: {
-    
-    dragOver(e){
-      e.preventDefault();
+    onDragOver(e){
+      dragOver.call(this, e)},
+    onDrop(e){
+      drop.call(this, e)},
+    openFileDialog,
+    onFileSelected,
+    removeFile,
+    uploadFiles() {
+      uploadFiles(this.files, this.first_name, this.second_name, this.uploading, this.error, this);
     },
-    drop(e){
-      e.preventDefault();
-      this.handleFiles(e.dataTransfer.files);
+    handleTextUpload() {
+      handleTextUpload(this.text, this.first_name, this.second_name, this);
     },
-    openFileDialog(){
-      this.$refs.fileInput.click();
+    handleFiles(fileList) {
+      handleFiles(fileList, this.files, this);
     },
-    onFileSelected(e){
-      this.handleFiles(e.target.files);
-      e.target.value = null
-    },
-    handleFiles(fileList){
-      const newFiles = Array.from(fileList);
-      this.files = [...this.files, ...newFiles];
-    },
-    removeFile(index){
-      this.files.splice(index, 1)
-    },
-    async uploadFiles(){
-      if (this.first_name && this.second_name != ''){
-      let userInfo = {
-      first_name: this.first_name,
-      second_name: this.second_name,
-      }
-      this.files.forEach((file) => {
-        if(!file.validFileType) return;
-      })
-      if (this.files.length === 0) return;
-
-      this.uploading = true;
-      this.error = null;
-
-      const formData = new FormData();
-      this.files.forEach((file) => {
-          formData.append('files', file);
-    })
-      formData.append('userInfo', JSON.stringify(userInfo));
-      fetch('http://localhost:8080/user/resume', {
-        method: 'POST',
-        body: formData,
-        userInfo,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        }
-    })
-        .then(response => {
-        console.log(response.json())
-      })
-
-      }  
-      else{
-        alert('Сначала необходимо заполнить поля: "Имя" и "Фамилия"')
-      }
-    },
-  async handleTextUpload() {
-        let data = {
-        text: this.text,
-        first_name: this.first_name,
-        second_name: this.second_name,
-      }
-      if (this.first_name && this.second_name != ''){
-      if (!this.text.trim()) {
-        return;
-      }
-      fetch("http://localhost:8080/user/resume", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json;charset=utf-8'
-        },
-        body: JSON.stringify(data)
-      })
-      .then(response => {
-        console.log(response.json())
-
-      })
-      }
-      else {
-        alert ('Сначала необходимо заполнить поля: "Имя" и "Фамилия"')
-      }
-   } },
-    inputSave(){
-      localStorage.setItem('value', document.querySelector('textarea.textSkills').value);
-    },  
-}
-
+  }
+};
 </script>
 
 <template>
-    <form @submit.prevent="handleTextUpload()">
-      <div class="userName">
-      <input class="inputName" placeholder="Имя" v-model="first_name" required>
-      <input class="inputName" placeholder="Фамилия" v-model="second_name">
+  <h2 style="padding: 20px">Ваши данные:</h2>
+  <div style="display: flex; flex-direction: column;">
+    <div style="display: flex; flex-direction: row; width: 100%; padding: 0; justify-content: space-between;">
+      <form @submit.prevent="handleTextUpload" style="width: 25%">
+      <div class="userName" >
+      <el-input class="inputInfo" placeholder="Имя" v-model="first_name" required />
+      <el-input class="inputInfo" placeholder="Фамилия" v-model="second_name" required />
+      <el-input class="inputInfo" placeholder="Почта" v-model="second_name" required />
+      <el-input class="inputInfo" placeholder="Телефон" v-model="second_name" required />
       </div>
-    </form>
-   <form method="post" enctype="multipart/form-data">
+  </form>
+   <form method="post" enctype="multipart/form-data" style="width: 85%">
     <div id="dropZone" class="dropZone" 
-    @dragover.prevent="dragOver"
-    @drop.prevent="drop"
+    @dragover.prevent="onDragOver, this.uploadText = 'Отпустите файл'"
+    @drop.prevent="onDrop"
+    @drop="this.uploadText='Перетащите сюда ваше резюме'"
+    @dragleave="this.uploadText='Перетащите сюда ваше резюме'"
     >
-      Перетащите сюда ваше резюме
+    <div  v-if="files.length !== 0" class="filesDiv">
+      <ul>
+          <img src="../../assets/docx.png" v-if="files[0].type == 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'" class="imgDocx">
+          <img src="../../assets/doc.png" v-if="files[0].type == 'application/msword'" class="imgDoc">
+          <img src="../../assets/pdf.png" v-if="files[0].type == 'application/pdf'" class="imgPdf">
+          <li v-for="(file, index) in files" :key="index" class="file">
+            {{ file.name }} 
+          </li>
+          <el-button type="danger" plain @click="removeFile(index)">Удалить</el-button>
+        </ul>
+    </div>
+    <div v-else> {{ uploadText }}</div>
   </div>
   </form>
+</div>
   <div class="chooseFileDiv">
         <div class="chooseFileButtonSetting">
         <p class="otherOption">Либо выберите файл вручную</p>
         <label htmlFor="chooseFile">
-          <button class="chooseFileButton" @click="openFileDialog()">Выбрать файл</button>
+          <el-button type="info" plain @click="openFileDialog" >Выбрать файл</el-button>
         </label>
-        <input id="inputTypeFile" class="chooseFile" type="file" ref="fileInput" @change="onFileSelected" accept=".pdf,.docx" />
+        <input id="inputTypeFile" class="chooseFile" type="file" ref="fileInput" @change="onFileSelected" accept=".pdf,.docx, .doc" />
       </div>
+      <div class="choosenFile">
         <p>Выбранные файлы: </p>
         <ul>
           <li v-for="(file, index) in files" :key="index">
             {{ file.name }} 
-            <button @click="removeFile(index)" class="upload">Удалить</button>
+
           </li>
+          <el-button style="margin-bottom: 20px; margin-top: 20px;" @click="removeFile(index)" type="danger" plain  v-if="files.length !== 0">Удалить</el-button>
         </ul>
-
-
-      <button @click="uploadFiles" :disabled="!files.length" class="upload" type="submit">Загрузить 
-      </button>
       </div>
-
-
+      <el-button plain @click="uploadFiles" :disabled="!files.length" class="upload" type="success">Загрузить 
+      </el-button>
+      </div>
       <div class="typeSkills">
         <textarea type="text" class="textSkills" value="" v-model="text" id="textSkills" placeholder="Введите сюда свои навыки, если отсутствует резюме"></textarea>
-        <button class="upload" @click="handleTextUpload()" type="submit" style="margin-top: 30px; margin-bottom: 40px;" :disabled="!text.trim()">Сохранить ответ</button>
+        <el-button class="upload" @click="handleTextUpload" type="success" plain style="margin-top: 30px; margin-bottom: 40px;" :disabled="!text.trim()">Сохранить ответ</el-button>
     </div>
-
-
+  </div>
 </template>
-
 <style scoped>
+.inputInfo{
+  margin-top: 10px;
+}
+.otherOption{
+  position: relative
+}
+ul{
+  margin: 0; padding: 0;
+}
+.choosenFile{
+  display: flex;
+  flex-direction: column;
+}
+.imgPdf{
+  height: calc(5em + 1vh + 1vw);
+  width: calc(5em + 1vh + 1vw);
+  position: relative;
+}
+.imgDoc{
+  height: calc(5em + 1vh + 1vw);
+  width: calc(5em + 1vh + 1vw);
+}
+.imgDocx{
+  height: calc(5em + 1vh + 1vw);
+  width: calc(5em + 1vh + 1vw);
+}
+.filesDiv{
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  justify-content: center;
+}
+.isHovered{
+  background-color: black
+}
   .typeSkills{
     display: flex;
     flex-direction: column;
     text-align: center;
     position: relative;
     align-items: center;
-    top: calc(7em + 1vw)
+    top: 60px;
   }
 
   .textSkills{
-    width: 60%;
-    height: calc(25em + 2vw);
-    font-size: calc(0.1em + 0.8vw);
+    width: 95%;
+    height: calc(25em + 1vw + 1vh);
+    font-size: calc(0.2em + 0.5vw + 0.5vh);
     font-family: 'Montserrat';
     border-radius: 20px;
+    box-shadow: 2px 2px 2px 2px gray;
   }
-  button{
-  font-size: calc(0.1em + 1vw);
-}
-.inputName{
-  border-radius: 20px;
-  margin-bottom: 10px;
-  height: calc(1em + 1vw);
-  font-family: 'Montserrat';
-  text-align: center;
-  font-size: calc(0.5em + 0.3vw);
-  transition: 0.5s;
-}
-.inputName:focus{
-  outline: none;
-  height: calc(1.3em + 1vw)
-}
-.userName{
-  width: 100%;
-  height: calc(5em + 1vw);
-  justify-content: center;
-  align-items:center;
-  display: flex;
-  flex-direction: column;
-}
 .dropZone{
-    width: 60%;
+    box-shadow: 2px 2px 2px 2px gray;
+    margin-left: 65px;
+    width: 90%;
     background-color: white;
-    height: calc(25em + 2vw);
+    height: calc(25em + 1vw + 1vh);
     position: relative;
-    top: 70px;
-    left: 50%;
-    transform: translate(-50%);
     text-align:center;
     display:flex;
     justify-content: center;
     align-items:center;
     border-radius: 20px;
   }
+.userName{
+  width: 100%;
+  margin-left: 20px;
+  top: 50%;
+  transform: translate(0%, 50%);
+}
 li{
   list-style-type: none;
-}
-button{
-  font-size: calc(0.1em + 1vw);
 }
   .chooseFile{
     color: transparent;
     position: relative;
     z-index: 100;
-
+    display: none
 }
-  .chooseFile::-webkit-file-upload-button{
-    background-color: white;
-    color: #2e2d2d;
-    border: none;
-    border-radius: 20px;
-    padding: 10px 20px;
-    cursor: pointer;
-    transition: 0.5s;
-    font-family: 'Montserrat';
-    font-size: calc(0.3em + 1vw);
-    transform: translate(45%);
-  }
-  .chooseFileButton::-webkit-file-upload-button:hover{
-    background-color: #727171d8;
-    color: white;
-  }
 
-.chooseFileButton{
-    background-color: white;
-    color: #2e2d2d;
-    border: none;
-    border-radius: 20px;
-    padding: 10px 20px;
-    cursor: pointer;
-    transition: 0.5s;
-    font-family: 'Montserrat';
-    transform: translate(50%);
-    display: none;
-  }
-  .chooseFileButton:hover{
-    background-color: #727171d8;
-    color: white;
-  }
   .chooseFileDiv{
-    color: white;
+    top: 20px;
+    color: black;
     position: relative;
     text-align: center;
-    top: 100px;
-  }
-  .upload{
-    background-color: white;
-    color: #2e2d2d;
-    border: none;
-    border-radius: 20px;
-    padding: 10px 20px;
-    cursor: pointer;
-    transition: 0.5s;
-    font-family: 'Montserrat';
-  }
-  .upload:hover{
-    background-color: #727171d8;
-    color: white;
-  }
-  .upload:disabled{
-    background-color: grey;
-    color: #2e2d2d;
-    border: none;
-    border-radius: 20px;
-    padding: 10px 20px;
-    font-family: 'Montserrat';
-    cursor: default;
   }
 </style>
