@@ -1,20 +1,21 @@
-<script>
-export default {
-  props: {
-    vacancyId: {
-      type: Number,
-      required: true,
-    },
-    candidates: {
-      type: Array,
-      required: true,
-    },
+<script setup>
+import { defineProps, defineEmits } from 'vue';
+
+defineProps({
+  vacancyId: {
+    type: Number,
+    required: true,
   },
-  methods: {
-    closeModal() {
-      this.$emit('close'); // Emit-им событие 'close' для закрытия модального окна
-    },
+  candidates: {
+    type: Array,
+    required: true,
   },
+});
+
+const emit = defineEmits(['close']);
+
+const closeModal = () => {
+  emit('close'); // Emit-им событие 'close' для закрытия модального окна
 };
 </script>
 

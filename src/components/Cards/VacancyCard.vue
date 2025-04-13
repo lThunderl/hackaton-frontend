@@ -1,59 +1,45 @@
-<script>
+<script setup>
+import { computed } from 'vue';
+import { defineProps, defineEmits } from 'vue';
 import CandidateCard from './CandidateCard.vue';
 
-export default {
-  name: 'VacancyCard',
-  components: {
-    CandidateCard,
+const props = defineProps({
+  vacancy: {
+    type: Object,
+    required: true,
   },
-  props: {
-    vacancy: {
-      type: Object,
-      required: true,
-    },
-    candidates: {
-      type: Array,
-      required: true,
-    },
+  candidates: {
+    type: Array,
+    required: true,
   },
-  emits: ['click'],
-  computed: {
-    // Метод для получения компетенций в правильном формате для отображения
-    formattedCompetencies() {
-      // Если у вакансии есть обработанные данные компетенций
-      if (this.vacancy.competenciesData && this.vacancy.competenciesData.length > 0) {
-        return this.vacancy.competenciesData;
-      }
-      
-      // Если компетенции представлены как массив строк (как в исходных мок-данных)
-      if (Array.isArray(this.vacancy.requirements)) {
-        return this.vacancy.requirements.map(req => ({ name: req }));
-      }
-      
-      // Если компетенции представлены как объект с ID и уровнем
-      if (this.vacancy.competencies && typeof this.vacancy.competencies === 'object' && !Array.isArray(this.vacancy.competencies)) {
-        // Возвращаем пустой массив, так как без данных о компетенциях мы не можем отобразить их названия
-        return [];
-      }
-      
-      // Если компетенции представлены как массив строк в поле competencies
-      if (Array.isArray(this.vacancy.competencies)) {
-        return this.vacancy.competencies.map(comp => ({ name: comp }));
-      }
-      
-      return [];
-    },
-    
-    // Определяем уровни компетенций для отображения
-    competencyLevels() {
-      return ['Начальный', 'Средний', 'Продвинутый'];
-    }
-  },
-  methods: {
-    handleCardClick() {
-      this.$emit('click', this.vacancy);
-    }
+});
+
+const emit = defineEmits(['click']);
+
+const formattedCompetencies = computed(() => {
+  if (props.vacancy.competenciesData && props.vacancy.competenciesData.length > 0) {
+    return props.vacancy.competenciesData;
   }
+  
+  if (Array.isArray(props.vacancy.requirements)) {
+    return props.vacancy.requirements.map(req => ({ name: req }));
+  }
+  
+  if (props.vacancy.competencies && typeof props.vacancy.competencies === 'object' && !Array.isArray(props.vacancy.competencies)) {
+    return [];
+  }
+  
+  if (Array.isArray(props.vacancy.competencies)) {
+    return props.vacancy.competencies.map(comp => ({ name: comp }));
+  }
+  
+  return [];
+});
+
+const competencyLevels = computed(() => ['Начальный', 'Средний', 'Продвинутый']);
+
+const handleCardClick = () => {
+  emit('click', props.vacancy);
 };
 </script>
 

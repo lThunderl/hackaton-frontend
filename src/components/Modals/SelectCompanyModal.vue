@@ -1,4 +1,85 @@
-<!-- SelectCompanyModal.vue -->
+<script setup>
+import { computed, ref } from 'vue';
+import { defineProps, defineEmits } from 'vue';
+import { ElMessage } from 'element-plus';
+
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
+    default: false
+  },
+  companies: {
+    type: Array,
+    default: () => []
+  }
+});
+
+const emit = defineEmits(['update:model-value', 'company-selected', 'company-created', 'company-deleted']);
+
+const isVisible = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:model-value', value)
+});
+
+const loading = ref(false);
+const searchQuery = ref('');
+const deleteConfirmVisible = ref(false);
+const companyToDelete = ref(null);
+
+const filteredCompanies = computed(() => {
+  if (!searchQuery.value) {
+    return props.companies;
+  }
+
+  const query = searchQuery.value.toLowerCase();
+  return props.companies.filter(company =>
+      company.name.toLowerCase().includes(query) ||
+      (company.description && company.description.toLowerCase().includes(query))
+  );
+});
+
+const handleClose = () => {
+  emit('update:model-value', false);
+  searchQuery.value = '';
+};
+
+const selectCompany = (company) => {
+  emit('company-selected', company);
+};
+
+const openAddCompanyModal = () => {
+  handleClose();
+  emit('company-created');
+};
+
+const confirmDelete = (company) => {
+  companyToDelete.value = company;
+  deleteConfirmVisible.value = true;
+};
+
+const deleteCompany = async () => {
+  if (companyToDelete.value) {
+    loading.value = true;
+    try {
+      emit('company-deleted', companyToDelete.value.id);
+      ElMessage({
+        type: 'success',
+        message: `Компания "${companyToDelete.value.name}" успешно удалена`
+      });
+    } catch (error) {
+      ElMessage({
+        type: 'error',
+        message: `Ошибка при удалении компании: ${error.message}`
+      });
+    } finally {
+      loading.value = false;
+      deleteConfirmVisible.value = false;
+      companyToDelete.value = null;
+    }
+  }
+};
+</script>
+
 <template>
   <el-dialog
     v-model="isVisible"
@@ -12,7 +93,6 @@
         placeholder="Поиск компании..."
         prefix-icon="el-icon-search"
         clearable
-        @input="handleSearch"
       />
     </div>
     
@@ -35,7 +115,7 @@
                 Удалить
               </el-button>
             </div>
-    </template>
+          </template>
         </el-table-column>
       </el-table>
     </div>
@@ -45,7 +125,7 @@
         <el-button type="success" @click="openAddCompanyModal">Создать новую компанию</el-button>
         <el-button @click="handleClose">Отмена</el-button>
       </span>
-</template>
+    </template>
   </el-dialog>
 
   <!-- Диалог подтверждения удаления -->
@@ -63,110 +143,6 @@
     </template>
   </el-dialog>
 </template>
-
-<script>
-import { computed, ref } from 'vue';
-import { ElMessage } from 'element-plus';
-
-export default {
-  props: {
-    modelValue: {
-      type: Boolean,
-      default: false
-    },
-    companies: {
-      type: Array,
-      default: () => []
-    }
-  },
-  
-  emits: ['update:model-value', 'company-selected', 'company-created', 'company-deleted'],
-
-  setup(props, { emit }) {
-    const isVisible = computed({
-      get: () => props.modelValue,
-      set: (value) => emit('update:model-value', value)
-    });
-
-    const loading = ref(false);
-    const searchQuery = ref('');
-    const deleteConfirmVisible = ref(false);
-    const companyToDelete = ref(null);
-
-    const filteredCompanies = computed(() => {
-      if (!searchQuery.value) {
-        return props.companies;
-      }
-
-      const query = searchQuery.value.toLowerCase();
-      return props.companies.filter(company =>
-        company.name.toLowerCase().includes(query) ||
-        (company.description && company.description.toLowerCase().includes(query))
-      );
-    });
-
-    const handleSearch = () => {
-      // Можно добавить дополнительную логику при поиске, если необходимо
-    };
-
-    const handleClose = () => {
-      emit('update:model-value', false);
-      searchQuery.value = '';
-    };
-
-    const selectCompany = (company) => {
-      emit('company-selected', company);
-    };
-
-    const openAddCompanyModal = () => {
-      handleClose();
-      emit('company-created'); // Это сигнализирует родительскому компоненту открыть модальное окно создания компании
-};
-
-    const confirmDelete = (company) => {
-      companyToDelete.value = company;
-      deleteConfirmVisible.value = true;
-    };
-
-    const deleteCompany = async () => {
-      if (companyToDelete.value) {
-        loading.value = true;
-        try {
-          emit('company-deleted', companyToDelete.value.id);
-          ElMessage({
-            type: 'success',
-            message: `Компания "${companyToDelete.value.name}" успешно удалена`
-          });
-        } catch (error) {
-          ElMessage({
-            type: 'error',
-            message: `Ошибка при удалении компании: ${error.message}`
-          });
-        } finally {
-          loading.value = false;
-          deleteConfirmVisible.value = false;
-          companyToDelete.value = null;
-        }
-      }
-    };
-
-    return {
-      isVisible,
-      loading,
-      searchQuery,
-      filteredCompanies,
-      deleteConfirmVisible,
-      companyToDelete,
-      handleClose,
-      handleSearch,
-      selectCompany,
-      openAddCompanyModal,
-      confirmDelete,
-      deleteCompany
-    };
-  }
-};
-</script>
 
 <style scoped>
 .search-container {

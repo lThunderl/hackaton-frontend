@@ -1,3 +1,208 @@
+<script setup>
+import { ref, reactive, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import AddCompanyModal from "@/components/Modals/AddCompanyModal.vue";
+import SelectCompanyModal from "@/components/Modals/SelectCompanyModal.vue";
+import competencyService from "@/components/service/competencyService";
+import companyService from "@/components/service/companyService";
+import vacancyService from "@/components/service/vacancyService";
+
+const router = useRouter();
+const ruleFormRef = ref(null);
+
+// Состояние данных
+const companies = ref([]);
+const availableCompetencies = ref([]);
+const selectedCompetencies = ref([]);
+const competencyLevels = ref({});
+const selectedCompany = ref(null);
+const isSelectCompanyModalOpen = ref(false);
+const companyModalVisible = ref(false);
+const isLoading = ref(false);
+
+// Форма с данными вакансии
+const ruleForm = reactive({
+  title: '',
+  description: '',
+  url: '',
+  location: {
+    country: '',
+    region: '',
+    city: ''
+  },
+  companyId: null,
+  competencies: []
+});
+
+const linkRule = /^(https?:\/\/)?([\da-z.-]+).([a-z.]{2,6})([/\w .-]*)*\/?$/
+
+// Правила валидации
+const rules = reactive({
+  title: [
+    { required: true, message: 'Пожалуйста, введите название должности', trigger: 'blur' },
+    { min: 3, max: 100, message: 'Длина должна быть от 3 до 100 символов', trigger: 'blur' }
+  ],
+  description: [
+    { required: true, message: 'Пожалуйста, введите описание вакансии', trigger: 'blur' },
+    { min: 10, message: 'Описание должно содержать минимум 10 символов', trigger: 'blur' }
+  ],
+  url: [
+    { required: true, message: 'Пожалуйста, укажите ссылку на вакансию', trigger: 'blur' },
+    {
+      pattern: linkRule,
+      message: 'Пожалуйста, введите корректный URL',
+      trigger: 'blur'
+    }
+  ],
+  'location.country': [
+    { required: true, message: 'Пожалуйста, укажите страну', trigger: 'blur' }
+  ],
+  'location.region': [
+    { required: true, message: 'Пожалуйста, укажите регион', trigger: 'blur' }
+  ],
+  'location.city': [
+    { required: true, message: 'Пожалуйста, укажите город', trigger: 'blur' }
+  ],
+  companyId: [
+    { required: true, message: 'Пожалуйста, выберите компанию', trigger: 'change' }
+  ],
+  competencies: [
+    { required: true, message: 'Пожалуйста, выберите компетенции', trigger: 'change' }
+  ]
+});
+
+onMounted(async () => {
+  isLoading.value = true;
+  try {
+    availableCompetencies.value = await competencyService.getAllCompetencies();
+
+    await loadCompanies();
+  } catch (error) {
+    console.error('Ошибка при загрузке данных', error);
+    ElMessage.error('Не удалось загрузить необходимые данные. Пожалуйста, попробуйте позже.');
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+const loadCompanies = async () => {
+  try {
+    companies.value = await companyService.getAllCompanies();
+  } catch (error) {
+    console.error('Ошибка при загрузке компаний', error);
+    ElMessage.error('Не удалось загрузить список компаний');
+  }
+};
+
+const openSelectCompanyModal = () => {
+  isSelectCompanyModalOpen.value = true;
+};
+
+const closeSelectCompanyModal = () => {
+  isSelectCompanyModalOpen.value = false;
+};
+
+const handleCompanySelected = (company) => {
+  selectedCompany.value = company;
+  ruleForm.companyId = company.id;
+  closeSelectCompanyModal();
+};
+
+const openCompanyModal = () => {
+  companyModalVisible.value = true;
+};
+
+const handleCompanyCreated = async (company) => {
+  companies.value.push(company);
+  handleCompanySelected(company);
+  ElMessage.success(`Компания "${company.name}" успешно создана и выбрана`);
+};
+
+// Обработка удаления компании
+const handleCompanyDeleted = async (companyId) => {
+  try {
+    await companyService.deleteCompany(companyId);
+
+    if (selectedCompany.value && selectedCompany.value.id === companyId) {
+      selectedCompany.value = null;
+      ruleForm.companyId = null;
+    }
+
+    await loadCompanies();
+  } catch (error) {
+    console.error('Ошибка при удалении компании:', error);
+    ElMessage.error(`Не удалось удалить компанию: ${error.message}`);
+  }
+};
+
+const onCompetenciesChange = (value) => {
+  selectedCompetencies.value = value;
+
+  value.forEach(competenceId => {
+    if (!competencyLevels.value[competenceId]) {
+      competencyLevels.value[competenceId] = 1;
+    }
+  });
+
+  Object.keys(competencyLevels.value).forEach(competenceId => {
+    if (!value.includes(parseInt(competenceId))) {
+      delete competencyLevels.value[competenceId];
+    }
+  });
+
+  ruleForm.competencies = value;
+};
+
+const getCompetenceName = (competenceId) => {
+  const competence = availableCompetencies.value.find(c => c.id === competenceId);
+  return competence ? competence.name : '';
+};
+
+const formatCompetencyLevel = (val) => {
+  const levels = ['Начальный', 'Средний', 'Продвинутый'];
+  return levels[val - 1];
+};
+
+// Отправка формы
+const submitForm = async (formEl) => {
+  if (!formEl) return;
+
+  await formEl.validate(async (valid) => {
+    if (valid) {
+      isLoading.value = true;
+      try {
+        const vacancyData = {
+          title: ruleForm.title,
+          description: ruleForm.description,
+          url: ruleForm.url,
+          location: ruleForm.location,
+          companyId: ruleForm.companyId,
+          competencies: competencyLevels.value
+        };
+
+        await vacancyService.createVacancy(vacancyData);
+        ElMessage.success('Вакансия успешно создана!');
+        console.log('Объект создан')
+        console.log(vacancyData)
+        router.push('/hr-page');
+      } catch (error) {
+        console.error('Ошибка при создании вакансии:', error);
+        ElMessage.error(`Не удалось создать вакансию: ${error.message}`);
+      } finally {
+        isLoading.value = false;
+      }
+    } else {
+      ElMessage.error('Пожалуйста, заполните все обязательные поля корректно');
+    }
+  });
+};
+
+const cancel = () => {
+  router.push('/hr-page');
+};
+</script>
+
 <template>
   <div class="create-vacancy">
     <h2>Создание вакансии</h2>
@@ -96,225 +301,6 @@
     </div>
   </div>
 </template>
-
-<script setup>
-import { ref, reactive, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
-import AddCompanyModal from "@/components/Modals/AddCompanyModal.vue";
-import SelectCompanyModal from "@/components/Modals/SelectCompanyModal.vue";
-import competencyService from "@/components/service/competencyService";
-import companyService from "@/components/service/companyService";
-import vacancyService from "@/components/service/vacancyService";
-
-const router = useRouter();
-const ruleFormRef = ref(null);
-
-// Состояние данных
-const companies = ref([]);
-const availableCompetencies = ref([]);
-const selectedCompetencies = ref([]);
-const competencyLevels = ref({});
-const selectedCompany = ref(null);
-const isSelectCompanyModalOpen = ref(false);
-const companyModalVisible = ref(false);
-const isLoading = ref(false);
-
-// Форма с данными вакансии
-const ruleForm = reactive({
-  title: '',
-  description: '',
-  url: '',
-  location: {
-    country: '',
-    region: '',
-    city: ''
-  },
-  companyId: null,
-  competencies: []
-});
-
-const linkRule = /^(https?:\/\/)?([\da-z.-]+).([a-z.]{2,6})([/\w .-]*)*\/?$/
-
-// Правила валидации
-const rules = reactive({
-  title: [
-    { required: true, message: 'Пожалуйста, введите название должности', trigger: 'blur' },
-    { min: 3, max: 100, message: 'Длина должна быть от 3 до 100 символов', trigger: 'blur' }
-  ],
-  description: [
-    { required: true, message: 'Пожалуйста, введите описание вакансии', trigger: 'blur' },
-    { min: 10, message: 'Описание должно содержать минимум 10 символов', trigger: 'blur' }
-  ],
-  url: [
-    { required: true, message: 'Пожалуйста, укажите ссылку на вакансию', trigger: 'blur' },
-    { 
-      pattern: linkRule,
-      message: 'Пожалуйста, введите корректный URL', 
-      trigger: 'blur' 
-    }
-  ],
-  'location.country': [
-    { required: true, message: 'Пожалуйста, укажите страну', trigger: 'blur' }
-  ],
-  'location.region': [
-    { required: true, message: 'Пожалуйста, укажите регион', trigger: 'blur' }
-  ],
-  'location.city': [
-    { required: true, message: 'Пожалуйста, укажите город', trigger: 'blur' }
-  ],
-  companyId: [
-    { required: true, message: 'Пожалуйста, выберите компанию', trigger: 'change' }
-  ],
-  competencies: [
-    { required: true, message: 'Пожалуйста, выберите компетенции', trigger: 'change' }
-  ]
-});
-
-// Загрузка данных при монтировании компонента
-onMounted(async () => {
-  isLoading.value = true;
-  try {
-    // Загружаем компетенции
-    availableCompetencies.value = await competencyService.getAllCompetencies();
-    
-    // Загружаем компании
-    await loadCompanies();
-  } catch (error) {
-    console.error('Ошибка при загрузке данных', error);
-    ElMessage.error('Не удалось загрузить необходимые данные. Пожалуйста, попробуйте позже.');
-  } finally {
-    isLoading.value = false;
-  }
-});
-
-// Загрузка списка компаний
-const loadCompanies = async () => {
-      try {
-    companies.value = await companyService.getAllCompanies();
-      } catch (error) {
-    console.error('Ошибка при загрузке компаний', error);
-    ElMessage.error('Не удалось загрузить список компаний');
-      }
-};
-
-// Методы для работы с компаниями
-const openSelectCompanyModal = () => {
-  isSelectCompanyModalOpen.value = true;
-};
-
-const closeSelectCompanyModal = () => {
-  isSelectCompanyModalOpen.value = false;
-};
-
-const handleCompanySelected = (company) => {
-  selectedCompany.value = company;
-  ruleForm.companyId = company.id;
-  closeSelectCompanyModal();
-};
-
-const openCompanyModal = () => {
-  companyModalVisible.value = true;
-};
-
-const handleCompanyCreated = async (company) => {
-  // Добавляем созданную компанию в список и выбираем её
-  companies.value.push(company);
-  handleCompanySelected(company);
-  ElMessage.success(`Компания "${company.name}" успешно создана и выбрана`);
-};
-
-// Обработка удаления компании
-const handleCompanyDeleted = async (companyId) => {
-  try {
-    await companyService.deleteCompany(companyId);
-
-    // Если удаленная компания была выбрана, сбрасываем выбор
-    if (selectedCompany.value && selectedCompany.value.id === companyId) {
-      selectedCompany.value = null;
-      ruleForm.companyId = null;
-    }
-
-    // Обновляем список компаний
-    await loadCompanies();
-  } catch (error) {
-    console.error('Ошибка при удалении компании:', error);
-    ElMessage.error(`Не удалось удалить компанию: ${error.message}`);
-  }
-};
-
-// Методы для работы с компетенциями
-const onCompetenciesChange = (value) => {
-  selectedCompetencies.value = value;
-
-  // Добавляем уровни для новых компетенций
-  value.forEach(competenceId => {
-    if (!competencyLevels.value[competenceId]) {
-      competencyLevels.value[competenceId] = 1;
-    }
-  });
-
-  // Удаляем уровни для удаленных компетенций
-  Object.keys(competencyLevels.value).forEach(competenceId => {
-    if (!value.includes(parseInt(competenceId))) {
-      delete competencyLevels.value[competenceId];
-    }
-  });
-
-  // Обновляем компетенции в форме для валидации
-  ruleForm.competencies = value;
-};
-
-const getCompetenceName = (competenceId) => {
-  const competence = availableCompetencies.value.find(c => c.id === competenceId);
-  return competence ? competence.name : '';
-};
-
-const formatCompetencyLevel = (val) => {
-  const levels = ['Начальный', 'Средний', 'Продвинутый'];
-  return levels[val - 1];
-};
-
-// Отправка формы
-const submitForm = async (formEl) => {
-  if (!formEl) return;
-
-  await formEl.validate(async (valid) => {
-    if (valid) {
-      isLoading.value = true;
-      try {
-        // Подготавливаем данные вакансии
-        const vacancyData = {
-          title: ruleForm.title,
-          description: ruleForm.description,
-          url: ruleForm.url,
-          location: ruleForm.location,
-          companyId: ruleForm.companyId,
-          competencies: competencyLevels.value
-        };
-
-        // Создаем вакансию через сервис
-        await vacancyService.createVacancy(vacancyData);
-        ElMessage.success('Вакансия успешно создана!');
-        console.log('Объект создан')
-        console.log(vacancyData)
-        router.push('/hr-page');
-      } catch (error) {
-        console.error('Ошибка при создании вакансии:', error);
-        ElMessage.error(`Не удалось создать вакансию: ${error.message}`);
-      } finally {
-        isLoading.value = false;
-      }
-    } else {
-      ElMessage.error('Пожалуйста, заполните все обязательные поля корректно');
-    }
-  });
-};
-
-const cancel = () => {
-  router.push('/hr-page');
-};
-</script>
 
 <style scoped>
 .create-vacancy {

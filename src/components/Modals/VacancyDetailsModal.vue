@@ -1,3 +1,112 @@
+<script setup>
+import { ref, computed, onMounted } from 'vue';
+import { defineProps, defineEmits } from 'vue';
+import { useRouter } from 'vue-router';
+import { ElMessage } from 'element-plus';
+import CandidateCard from '../Cards/CandidateCard.vue';
+import companyService from '@/components/service/companyService';
+import vacancyService from '@/components/service/vacancyService';
+
+const props = defineProps({
+  modelValue: {
+    type: Boolean,
+    default: false
+  },
+  vacancy: {
+    type: Object,
+    required: true
+  },
+  candidates: {
+    type: Array,
+    default: () => []
+  },
+  canEdit: {
+    type: Boolean,
+    default: true
+  }
+});
+
+const emit = defineEmits(['update:modelValue', 'close', 'vacancy-deleted']);
+
+const router = useRouter();
+const company = ref(null);
+const deleteConfirmVisible = ref(false);
+const isDeleting = ref(false);
+
+const dialogVisible = computed({
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value)
+});
+
+onMounted(async () => {
+  if (props.vacancy.companyId) {
+    try {
+      company.value = await companyService.getCompanyById(props.vacancy.companyId);
+    } catch (error) {
+      console.error('Ошибка при загрузке информации о компании:', error);
+    }
+  }
+});
+
+const handleClose = () => {
+  emit('close');
+};
+
+const editVacancy = () => {
+  router.push({name: 'EditVacancy', params: {id: props.vacancy.id}});
+  handleClose();
+};
+
+const confirmDelete = () => {
+  deleteConfirmVisible.value = true;
+};
+
+const deleteVacancy = async () => {
+  isDeleting.value = true;
+  try {
+    await vacancyService.deleteVacancy(props.vacancy.id);
+    ElMessage.success('Вакансия успешно удалена');
+    deleteConfirmVisible.value = false;
+    emit('vacancy-deleted', props.vacancy.id);
+    handleClose();
+  } catch (error) {
+    console.error('Ошибка при удалении вакансии:', error);
+    ElMessage.error('Не удалось удалить вакансию');
+  } finally {
+    isDeleting.value = false;
+  }
+};
+
+// Метод для получения компетенций в правильном формате для отображения
+const formattedCompetencies = computed(() => {
+  // Если у вакансии есть обработанные данные компетенций
+  if (props.vacancy.competenciesData && props.vacancy.competenciesData.length > 0) {
+    return props.vacancy.competenciesData;
+  }
+
+  // Если компетенции представлены как массив строк (как в исходных мок-данных)
+  if (Array.isArray(props.vacancy.requirements)) {
+    return props.vacancy.requirements.map(req => ({name: req}));
+  }
+
+  // Если компетенции представлены как объект с ID и уровнем
+  if (props.vacancy.competencies && typeof props.vacancy.competencies === 'object' && !Array.isArray(props.vacancy.competencies)) {
+    // Возвращаем пустой массив, так как без данных о компетенциях мы не можем отобразить их названия
+    return [];
+  }
+
+  // Если компетенции представлены как массив строк в поле competencies
+  if (Array.isArray(props.vacancy.competencies)) {
+    return props.vacancy.competencies.map(comp => ({name: comp}));
+  }
+
+  return [];
+});
+
+// Определяем уровни компетенций для отображения
+const competencyLevels = ['Начальный', 'Средний', 'Продвинутый'];
+</script>
+
 <template>
   <div class="vacancy-details-dialog">
     <el-dialog
@@ -103,141 +212,10 @@
           <el-button @click="deleteConfirmVisible = false">Отмена</el-button>
           <el-button type="danger" @click="deleteVacancy" :loading="isDeleting">Удалить</el-button>
         </span>
-</template>
+      </template>
     </el-dialog>
   </div>
 </template>
-
-<script>
-import {ref, computed, onMounted} from 'vue';
-import {useRouter} from 'vue-router';
-import CandidateCard from '../Cards/CandidateCard.vue';
-import companyService from '@/components/service/companyService';
-import vacancyService from '@/components/service/vacancyService';
-import { ElMessage } from 'element-plus';
-
-export default {
-  name: 'VacancyDetailsModal',
-
-  components: {
-    CandidateCard
-  },
-
-  props: {
-    modelValue: {
-      type: Boolean,
-      default: false
-    },
-    vacancy: {
-      type: Object,
-      required: true
-    },
-    candidates: {
-      type: Array,
-      default: () => []
-    },
-    canEdit: {
-      type: Boolean,
-      default: true
-    }
-  },
-
-  emits: ['update:modelValue', 'close', 'vacancy-deleted'],
-
-  setup(props, {emit}) {
-    const router = useRouter();
-    const company = ref(null);
-    const deleteConfirmVisible = ref(false);
-    const isDeleting = ref(false);
-
-    const dialogVisible = computed({
-      get: () => props.modelValue,
-      set: (value) => emit('update:modelValue', value)
-    });
-
-    onMounted(async () => {
-      if (props.vacancy.companyId) {
-        try {
-          company.value = await companyService.getCompanyById(props.vacancy.companyId);
-        } catch (error) {
-          console.error('Ошибка при загрузке информации о компании:', error);
-        }
-      }
-    });
-
-    const handleClose = () => {
-      emit('close');
-    };
-
-    const editVacancy = () => {
-      router.push({name: 'EditVacancy', params: {id: props.vacancy.id}});
-      handleClose();
-    };
-
-    const confirmDelete = () => {
-      deleteConfirmVisible.value = true;
-    };
-
-    const deleteVacancy = async () => {
-      isDeleting.value = true;
-      try {
-        await vacancyService.deleteVacancy(props.vacancy.id);
-        ElMessage.success('Вакансия успешно удалена');
-        deleteConfirmVisible.value = false;
-        emit('vacancy-deleted', props.vacancy.id);
-        handleClose();
-      } catch (error) {
-        console.error('Ошибка при удалении вакансии:', error);
-        ElMessage.error('Не удалось удалить вакансию');
-      } finally {
-        isDeleting.value = false;
-  }
-};
-
-    // Метод для получения компетенций в правильном формате для отображения
-    const formattedCompetencies = computed(() => {
-      // Если у вакансии есть обработанные данные компетенций
-      if (props.vacancy.competenciesData && props.vacancy.competenciesData.length > 0) {
-        return props.vacancy.competenciesData;
-      }
-
-      // Если компетенции представлены как массив строк (как в исходных мок-данных)
-      if (Array.isArray(props.vacancy.requirements)) {
-        return props.vacancy.requirements.map(req => ({name: req}));
-      }
-
-      // Если компетенции представлены как объект с ID и уровнем
-      if (props.vacancy.competencies && typeof props.vacancy.competencies === 'object' && !Array.isArray(props.vacancy.competencies)) {
-        // Возвращаем пустой массив, так как без данных о компетенциях мы не можем отобразить их названия
-        return [];
-      }
-
-      // Если компетенции представлены как массив строк в поле competencies
-      if (Array.isArray(props.vacancy.competencies)) {
-        return props.vacancy.competencies.map(comp => ({name: comp}));
-      }
-
-      return [];
-    });
-
-    // Определяем уровни компетенций для отображения
-    const competencyLevels = ['Начальный', 'Средний', 'Продвинутый'];
-
-    return {
-      dialogVisible,
-      company,
-      handleClose,
-      editVacancy,
-      formattedCompetencies,
-      competencyLevels,
-      confirmDelete,
-      deleteVacancy,
-      deleteConfirmVisible,
-      isDeleting
-    };
-  }
-};
-</script>
 
 <style scoped>
 :deep(.el-dialog) {

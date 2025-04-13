@@ -1,3 +1,77 @@
+<script setup>
+import {onMounted, ref} from 'vue';
+import {useRouter} from 'vue-router';
+import VacancyCard from '../Cards/VacancyCard.vue';
+import AllCandidatesModal from '../Modals/AllCandidatesModal.vue';
+import VacancyDetailsModal from '../Modals/VacancyDetailsModal.vue';
+import vacancyService from "@/components/service/vacancyService";
+
+const router = useRouter();
+
+const vacancies = ref([]);
+const candidatesMap = ref({});
+const isLoading = ref(true);
+
+const selectedVacancyId = ref(null);
+const isCandidatesModalOpen = ref(false);
+
+const selectedVacancy = ref(null);
+const isVacancyDetailsModalOpen = ref(false);
+
+onMounted(async () => {
+  try {
+    vacancies.value = await vacancyService.getAllVacancies();
+
+    for (const vacancy of vacancies.value) {
+      candidatesMap.value[vacancy.id] = await vacancyService.getCandidatesByVacancyId(vacancy.id);
+    }
+  } catch (error) {
+    console.error('Ошибка при загрузке данных:', error);
+  } finally {
+    isLoading.value = false;
+  }
+});
+
+const goToCreateVacancy = () => {
+  router.push({ name: 'CreateVacancy' });
+};
+
+const getSuitableCandidates = (vacancyId) => {
+  return candidatesMap.value[vacancyId] || [];
+};
+
+const getLimitedCandidates = (vacancyId) => {
+  const candidates = getSuitableCandidates(vacancyId);
+  return candidates.slice(0, 3);
+};
+
+const showAllCandidates = (vacancyId) => {
+  selectedVacancyId.value = vacancyId;
+  isCandidatesModalOpen.value = true;
+};
+
+const closeCandidatesModal = () => {
+  isCandidatesModalOpen.value = false;
+  selectedVacancyId.value = null;
+};
+
+const showVacancyDetails = (vacancy) => {
+  selectedVacancy.value = vacancy;
+  isVacancyDetailsModalOpen.value = true;
+};
+
+const closeVacancyDetailsModal = () => {
+  isVacancyDetailsModalOpen.value = false;
+  selectedVacancy.value = null;
+};
+
+const handleVacancyDeleted = (vacancyId) => {
+  vacancies.value = vacancies.value.filter(vacancy => vacancy.id !== vacancyId);
+
+  delete candidatesMap.value[vacancyId];
+};
+</script>
+
 <template>
   <div class="vacancy-list">
     <div class="head">
@@ -56,93 +130,6 @@
     />
   </div>
 </template>
-
-<script setup>
-import {onMounted, ref} from 'vue';
-import {useRouter} from 'vue-router';
-import VacancyCard from '../Cards/VacancyCard.vue';
-import AllCandidatesModal from '../Modals/AllCandidatesModal.vue';
-import VacancyDetailsModal from '../Modals/VacancyDetailsModal.vue';
-import vacancyService from "@/components/service/vacancyService";
-
-const router = useRouter();
-
-// Состояние данных
-const vacancies = ref([]);
-const candidatesMap = ref({});
-const isLoading = ref(true);
-
-// Состояние для модального окна кандидатов
-const selectedVacancyId = ref(null);
-const isCandidatesModalOpen = ref(false);
-
-// Состояние для модального окна деталей вакансии
-const selectedVacancy = ref(null);
-const isVacancyDetailsModalOpen = ref(false);
-
-// Загрузка данных при монтировании компонента
-onMounted(async () => {
-  try {
-    // Загружаем вакансии
-    vacancies.value = await vacancyService.getAllVacancies();
-
-    // Загружаем кандидатов для каждой вакансии
-    for (const vacancy of vacancies.value) {
-      candidatesMap.value[vacancy.id] = await vacancyService.getCandidatesByVacancyId(vacancy.id);
-    }
-  } catch (error) {
-    console.error('Ошибка при загрузке данных:', error);
-  } finally {
-    isLoading.value = false;
-  }
-});
-
-// Методы для навигации
-const goToCreateVacancy = () => {
-  router.push({ name: 'CreateVacancy' });
-};
-
-// Методы для работы с кандидатами
-const getSuitableCandidates = (vacancyId) => {
-  return candidatesMap.value[vacancyId] || [];
-};
-
-const getLimitedCandidates = (vacancyId) => {
-  const candidates = getSuitableCandidates(vacancyId);
-  return candidates.slice(0, 3);
-};
-
-// Методы для работы с модальным окном кандидатов
-const showAllCandidates = (vacancyId) => {
-  selectedVacancyId.value = vacancyId;
-  isCandidatesModalOpen.value = true;
-};
-
-const closeCandidatesModal = () => {
-  isCandidatesModalOpen.value = false;
-  selectedVacancyId.value = null;
-};
-
-// Методы для работы с модальным окном деталей вакансии
-const showVacancyDetails = (vacancy) => {
-  selectedVacancy.value = vacancy;
-  isVacancyDetailsModalOpen.value = true;
-};
-
-const closeVacancyDetailsModal = () => {
-  isVacancyDetailsModalOpen.value = false;
-  selectedVacancy.value = null;
-};
-
-// Обработчик удаления вакансии
-const handleVacancyDeleted = (vacancyId) => {
-  // Удаляем вакансию из списка
-  vacancies.value = vacancies.value.filter(vacancy => vacancy.id !== vacancyId);
-
-  // Удаляем кандидатов для этой вакансии
-  delete candidatesMap.value[vacancyId];
-};
-</script>
 
 <style scoped>
 .vacancy-list {
