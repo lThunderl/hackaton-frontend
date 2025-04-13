@@ -16,6 +16,20 @@ const companyService = {
     return Promise.resolve([...companies.value]);
   },
 
+  // Поиск компаний по названию или описанию
+  searchCompanies(query) {
+    if (!query) {
+      return this.getAllCompanies();
+    }
+
+    const searchQuery = query.toLowerCase();
+    const result = companies.value.filter(company =>
+      company.name.toLowerCase().includes(searchQuery) ||
+      (company.description && company.description.toLowerCase().includes(searchQuery))
+    );
+    return Promise.resolve(result);
+  },
+
   // Получить компанию по ID
   getCompanyById(id) {
     const company = companies.value.find(c => c.id === id);
@@ -29,7 +43,7 @@ const companyService = {
       id: newId,
       ...companyData
     };
-    
+
     companies.value.push(newCompany);
     return Promise.resolve(newCompany);
   },

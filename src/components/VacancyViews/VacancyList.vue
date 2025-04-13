@@ -52,6 +52,7 @@
       :vacancy="selectedVacancy"
       :candidates="getSuitableCandidates(selectedVacancy?.id)"
       @close="closeVacancyDetailsModal"
+      @vacancy-deleted="handleVacancyDeleted"
     />
   </div>
 </template>
@@ -131,6 +132,15 @@ const showVacancyDetails = (vacancy) => {
 const closeVacancyDetailsModal = () => {
   isVacancyDetailsModalOpen.value = false;
   selectedVacancy.value = null;
+};
+
+// Обработчик удаления вакансии
+const handleVacancyDeleted = (vacancyId) => {
+  // Удаляем вакансию из списка
+  vacancies.value = vacancies.value.filter(vacancy => vacancy.id !== vacancyId);
+
+  // Удаляем кандидатов для этой вакансии
+  delete candidatesMap.value[vacancyId];
 };
 </script>
 

@@ -5,7 +5,6 @@
         :title="vacancy.title"
         width="80%"
         center
-        top="20px"
         @close="handleClose"
         class="vacancy-details-dialog"
     >
@@ -84,8 +83,27 @@
         <el-button type="primary" @click="editVacancy" v-if="canEdit">
           Редактировать вакансию
         </el-button>
+        <el-button type="danger" @click="confirmDelete" v-if="canEdit">
+          Удалить вакансию
+        </el-button>
       </span>
       </template>
+    </el-dialog>
+
+    <!-- Диалог подтверждения удаления -->
+    <el-dialog
+      v-model="deleteConfirmVisible"
+      title="Подтверждение удаления"
+      width="30%"
+      center
+    >
+      <span>Вы уверены, что хотите удалить вакансию "{{ vacancy.title }}"?</span>
+      <template #footer>
+        <span class="dialog-footer">
+          <el-button @click="deleteConfirmVisible = false">Отмена</el-button>
+          <el-button type="danger" @click="deleteVacancy" :loading="isDeleting">Удалить</el-button>
+        </span>
+</template>
     </el-dialog>
   </div>
 </template>
@@ -95,6 +113,8 @@ import {ref, computed, onMounted} from 'vue';
 import {useRouter} from 'vue-router';
 import CandidateCard from '../Cards/CandidateCard.vue';
 import companyService from '@/components/service/companyService';
+import vacancyService from '@/components/service/vacancyService';
+import { ElMessage } from 'element-plus';
 
 export default {
   name: 'VacancyDetailsModal',
@@ -122,11 +142,13 @@ export default {
     }
   },
 
-  emits: ['update:modelValue', 'close'],
+  emits: ['update:modelValue', 'close', 'vacancy-deleted'],
 
   setup(props, {emit}) {
     const router = useRouter();
     const company = ref(null);
+    const deleteConfirmVisible = ref(false);
+    const isDeleting = ref(false);
 
     const dialogVisible = computed({
       get: () => props.modelValue,
@@ -151,6 +173,26 @@ export default {
       router.push({name: 'EditVacancy', params: {id: props.vacancy.id}});
       handleClose();
     };
+
+    const confirmDelete = () => {
+      deleteConfirmVisible.value = true;
+    };
+
+    const deleteVacancy = async () => {
+      isDeleting.value = true;
+      try {
+        await vacancyService.deleteVacancy(props.vacancy.id);
+        ElMessage.success('Вакансия успешно удалена');
+        deleteConfirmVisible.value = false;
+        emit('vacancy-deleted', props.vacancy.id);
+        handleClose();
+      } catch (error) {
+        console.error('Ошибка при удалении вакансии:', error);
+        ElMessage.error('Не удалось удалить вакансию');
+      } finally {
+        isDeleting.value = false;
+  }
+};
 
     // Метод для получения компетенций в правильном формате для отображения
     const formattedCompetencies = computed(() => {
@@ -187,13 +229,30 @@ export default {
       handleClose,
       editVacancy,
       formattedCompetencies,
-      competencyLevels
+      competencyLevels,
+      confirmDelete,
+      deleteVacancy,
+      deleteConfirmVisible,
+      isDeleting
     };
   }
 };
 </script>
 
 <style scoped>
+:deep(.el-dialog) {
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  margin-top: 5vh !important;
+}
+
+:deep(.el-dialog__body) {
+  overflow-y: auto;
+  max-height: calc(90vh - 120px); /* Вычитаем примерную высоту заголовка и футера */
+  padding-right: 15px;
+}
+
 .vacancy-details {
   display: flex;
   flex-direction: column;

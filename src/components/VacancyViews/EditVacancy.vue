@@ -1,7 +1,14 @@
 <template>
-  <div class="create-vacancy">
-    <h2>Создание вакансии</h2>
-    <div class="form-group">
+  <div class="edit-vacancy">
+    <h2>Редактирование вакансии</h2>
+    <div v-if="isLoading" class="loading-container">
+      <el-skeleton :rows="10" animated />
+    </div>
+    <div v-else-if="notFound" class="not-found">
+      <h3>Вакансия не найдена</h3>
+      <el-button @click="goBack">Вернуться назад</el-button>
+    </div>
+    <div v-else class="form-group">
       <el-form 
         :model="ruleForm" 
         :rules="rules" 
@@ -81,8 +88,8 @@
         </el-form-item>
 
         <el-form-item>
-          <el-button type="primary" @click="submitForm(ruleFormRef)" :loading="isLoading">
-            Создать вакансию
+          <el-button type="primary" @click="submitForm(ruleFormRef)" :loading="isSaving">
+            Сохранить изменения
           </el-button>
           <el-button @click="cancel">Отмена</el-button>
         </el-form-item>
@@ -99,7 +106,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import AddCompanyModal from "@/components/Modals/AddCompanyModal.vue";
 import SelectCompanyModal from "@/components/Modals/SelectCompanyModal.vue";
@@ -108,6 +115,7 @@ import companyService from "@/components/service/companyService";
 import vacancyService from "@/components/service/vacancyService";
 
 const router = useRouter();
+const route = useRoute();
 const ruleFormRef = ref(null);
 
 // Состояние данных
@@ -118,7 +126,12 @@ const competencyLevels = ref({});
 const selectedCompany = ref(null);
 const isSelectCompanyModalOpen = ref(false);
 const companyModalVisible = ref(false);
-const isLoading = ref(false);
+const isLoading = ref(true);
+const isSaving = ref(false);
+const notFound = ref(false);
+
+// Получаем ID вакансии из параметров маршрута
+const vacancyId = parseInt(route.params.id);
 
 // Форма с данными вакансии
 const ruleForm = reactive({
@@ -180,9 +193,52 @@ onMounted(async () => {
     
     // Загружаем компании
     await loadCompanies();
+
+    // Загружаем данные вакансии
+    const vacancy = await vacancyService.getVacancyById(vacancyId);
+    
+    if (!vacancy) {
+      notFound.value = true;
+      return;
+    }
+    
+    // Заполняем форму данными вакансии
+    ruleForm.title = vacancy.title;
+    ruleForm.description = vacancy.description;
+    ruleForm.url = vacancy.url;
+    ruleForm.location = vacancy.location || { country: '', region: '', city: '' };
+    ruleForm.companyId = vacancy.companyId;
+    
+    // Находим компанию
+    if (vacancy.companyId) {
+      selectedCompany.value = companies.value.find(c => c.id === vacancy.companyId);
+    }
+    
+    // Обрабатываем компетенции
+    if (vacancy.competencies && typeof vacancy.competencies === 'object' && !Array.isArray(vacancy.competencies)) {
+      // Заполняем уровни компетенций
+      competencyLevels.value = { ...vacancy.competencies };
+      
+      // Заполняем выбранные компетенции
+      selectedCompetencies.value = Object.keys(vacancy.competencies).map(id => parseInt(id));
+      ruleForm.competencies = selectedCompetencies.value;
+    } else if (vacancy.competenciesData && vacancy.competenciesData.length > 0) {
+      // Если есть обработанные данные компетенций
+      vacancy.competenciesData.forEach(comp => {
+        if (comp.id) {
+          selectedCompetencies.value.push(comp.id);
+          if (comp.level) {
+            competencyLevels.value[comp.id] = comp.level;
+          }
+        }
+      });
+      ruleForm.competencies = selectedCompetencies.value;
+    }
+    
   } catch (error) {
     console.error('Ошибка при загрузке данных', error);
     ElMessage.error('Не удалось загрузить необходимые данные. Пожалуйста, попробуйте позже.');
+    notFound.value = true;
   } finally {
     isLoading.value = false;
   }
@@ -281,7 +337,7 @@ const submitForm = async (formEl) => {
 
   await formEl.validate(async (valid) => {
     if (valid) {
-      isLoading.value = true;
+      isSaving.value = true;
       try {
         // Подготавливаем данные вакансии
         const vacancyData = {
@@ -293,17 +349,15 @@ const submitForm = async (formEl) => {
           competencies: competencyLevels.value
         };
 
-        // Создаем вакансию через сервис
-        await vacancyService.createVacancy(vacancyData);
-        ElMessage.success('Вакансия успешно создана!');
-        console.log('Объект создан')
-        console.log(vacancyData)
+        // Обновляем вакансию через сервис
+        await vacancyService.updateVacancy(vacancyId, vacancyData);
+        ElMessage.success('Вакансия успешно обновлена!');
         router.push('/hr-page');
       } catch (error) {
-        console.error('Ошибка при создании вакансии:', error);
-        ElMessage.error(`Не удалось создать вакансию: ${error.message}`);
+        console.error('Ошибка при обновлении вакансии:', error);
+        ElMessage.error(`Не удалось обновить вакансию: ${error.message}`);
       } finally {
-        isLoading.value = false;
+        isSaving.value = false;
       }
     } else {
       ElMessage.error('Пожалуйста, заполните все обязательные поля корректно');
@@ -314,16 +368,30 @@ const submitForm = async (formEl) => {
 const cancel = () => {
   router.push('/hr-page');
 };
+
+const goBack = () => {
+  router.push('/hr-page');
+};
 </script>
 
 <style scoped>
-.create-vacancy {
+.edit-vacancy {
   padding: 20px;
 }
 
 .form-group {
   width: 80%;
   margin: 0 auto;
+}
+
+.loading-container {
+  width: 80%;
+  margin: 20px auto;
+}
+
+.not-found {
+  text-align: center;
+  margin: 50px auto;
 }
 
 .competency-levels {

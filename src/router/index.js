@@ -4,6 +4,7 @@ import DemoVue from "@/components/DemoVue.vue";
 
 import VacancyList from '@/components/VacancyViews/VacancyList.vue'
 import CreateVacancy from "@/components/VacancyViews/CreateVacancy.vue";
+import EditVacancy from "@/components/VacancyViews/EditVacancy.vue";
 
 const routes = [
     {
@@ -21,6 +22,12 @@ const routes = [
         name: 'CreateVacancy',
         component: CreateVacancy,
     },
+    {
+        path: '/edit-vacancy/:id',
+        name: 'EditVacancy',
+        component: EditVacancy,
+        props: true,
+    },
 ];
 
 const router = createRouter({
@@ -29,4 +36,3 @@ const router = createRouter({
 });
 
 export default router;
-
