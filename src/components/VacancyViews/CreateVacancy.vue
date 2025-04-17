@@ -1,9 +1,10 @@
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-import { ElMessage } from 'element-plus';
+import {ref, reactive, onMounted, watch} from 'vue';
+import {useRouter} from 'vue-router';
+import {ElMessage} from 'element-plus';
 import AddCompanyModal from "@/components/Modals/AddCompanyModal.vue";
 import SelectCompanyModal from "@/components/Modals/SelectCompanyModal.vue";
+import AddCompetencyModal from "@/components/Modals/AddCompetencyModal.vue";
 import competencyService from "@/components/service/competencyService";
 import companyService from "@/components/service/companyService";
 import vacancyService from "@/components/service/vacancyService";
@@ -19,11 +20,11 @@ const competencyLevels = ref({});
 const selectedCompany = ref(null);
 const isSelectCompanyModalOpen = ref(false);
 const companyModalVisible = ref(false);
+const competencyModalVisible = ref(false);
 const isLoading = ref(false);
 
-// Форма с данными вакансии
 const ruleForm = reactive({
-  title: '',
+  name: '',
   description: '',
   url: '',
   location: {
@@ -31,24 +32,24 @@ const ruleForm = reactive({
     region: '',
     city: ''
   },
-  companyId: null,
-  competencies: []
+  company_id: null,
+  vacancy_competencies: []
 });
 
 const linkRule = /^(https?:\/\/)?([\da-z.-]+).([a-z.]{2,6})([/\w .-]*)*\/?$/
 
 // Правила валидации
 const rules = reactive({
-  title: [
-    { required: true, message: 'Пожалуйста, введите название должности', trigger: 'blur' },
-    { min: 3, max: 100, message: 'Длина должна быть от 3 до 100 символов', trigger: 'blur' }
+  name: [
+    {required: true, message: 'Пожалуйста, введите название должности', trigger: 'blur'},
+    {min: 3, max: 100, message: 'Длина должна быть от 3 до 100 символов', trigger: 'blur'}
   ],
   description: [
-    { required: true, message: 'Пожалуйста, введите описание вакансии', trigger: 'blur' },
-    { min: 10, message: 'Описание должно содержать минимум 10 символов', trigger: 'blur' }
+    {required: true, message: 'Пожалуйста, введите описание вакансии', trigger: 'blur'},
+    {min: 10, message: 'Описание должно содержать минимум 10 символов', trigger: 'blur'}
   ],
   url: [
-    { required: true, message: 'Пожалуйста, укажите ссылку на вакансию', trigger: 'blur' },
+    {required: true, message: 'Пожалуйста, укажите ссылку на вакансию', trigger: 'blur'},
     {
       pattern: linkRule,
       message: 'Пожалуйста, введите корректный URL',
@@ -56,28 +57,61 @@ const rules = reactive({
     }
   ],
   'location.country': [
-    { required: true, message: 'Пожалуйста, укажите страну', trigger: 'blur' }
+    {required: true, message: 'Пожалуйста, укажите страну', trigger: 'blur'}
   ],
   'location.region': [
-    { required: true, message: 'Пожалуйста, укажите регион', trigger: 'blur' }
+    {required: true, message: 'Пожалуйста, укажите регион', trigger: 'blur'}
   ],
   'location.city': [
-    { required: true, message: 'Пожалуйста, укажите город', trigger: 'blur' }
+    {required: true, message: 'Пожалуйста, укажите город', trigger: 'blur'}
   ],
-  companyId: [
-    { required: true, message: 'Пожалуйста, выберите компанию', trigger: 'change' }
+  company_id: [
+    {required: true, message: 'Пожалуйста, выберите компанию', trigger: 'change'}
   ],
-  competencies: [
-    { required: true, message: 'Пожалуйста, выберите компетенции', trigger: 'change' }
+  vacancy_competencies: [
+    {
+      validator: (rule, value, callback) => {
+        if (selectedCompetencies.value && selectedCompetencies.value.length === 0) {
+          callback(new Error('Пожалуйста, выберите компетенции'));
+        } else {
+          callback();
+        }
+      },
+      trigger: 'change'
+    }
   ]
 });
+
+const convertLevelToBackendValue = (level) => {
+  const numLevel = Number(level);
+
+  switch (numLevel) {
+    case 1: // Начальный (3-6)
+      return 4.5;
+    case 2: // Средний (6-8)
+      return 7.0;
+    case 3: // Продвинутый (8-10)
+      return 9.0;
+    default:
+      return 4.5;
+  }
+};
+
+watch(selectedCompetencies, (newVal) => {
+  if (newVal && newVal.length > 0) {
+    updateVacancyCompetencies();
+  } else {
+    ruleForm.vacancy_competencies = [];
+  }
+}, { deep: true });
 
 onMounted(async () => {
   isLoading.value = true;
   try {
     availableCompetencies.value = await competencyService.getAllCompetencies();
-
     await loadCompanies();
+
+    competencyLevels.value = {};
   } catch (error) {
     console.error('Ошибка при загрузке данных', error);
     ElMessage.error('Не удалось загрузить необходимые данные. Пожалуйста, попробуйте позже.');
@@ -89,10 +123,34 @@ onMounted(async () => {
 const loadCompanies = async () => {
   try {
     companies.value = await companyService.getAllCompanies();
+    console.log(companies);
   } catch (error) {
     console.error('Ошибка при загрузке компаний', error);
     ElMessage.error('Не удалось загрузить список компаний');
   }
+};
+
+const openCompetencyModal = () => {
+  competencyModalVisible.value = true;
+};
+
+const handleCompetencyCreated = async (competency) => {
+  if (!competency || !competency.id) return;
+
+  availableCompetencies.value.push(competency);
+
+  if (!selectedCompetencies.value) {
+    selectedCompetencies.value = [];
+  }
+
+  selectedCompetencies.value.push(competency.id);
+
+  if (!competencyLevels.value) {
+    competencyLevels.value = {};
+  }
+
+  competencyLevels.value[competency.id] = 1;
+  updateVacancyCompetencies();
 };
 
 const openSelectCompanyModal = () => {
@@ -104,8 +162,10 @@ const closeSelectCompanyModal = () => {
 };
 
 const handleCompanySelected = (company) => {
+  if (!company) return;
+
   selectedCompany.value = company;
-  ruleForm.companyId = company.id;
+  ruleForm.company_id = company.id;
   closeSelectCompanyModal();
 };
 
@@ -114,19 +174,22 @@ const openCompanyModal = () => {
 };
 
 const handleCompanyCreated = async (company) => {
+  if (!company) return;
+
   companies.value.push(company);
   handleCompanySelected(company);
   ElMessage.success(`Компания "${company.name}" успешно создана и выбрана`);
 };
 
-// Обработка удаления компании
 const handleCompanyDeleted = async (companyId) => {
+  if (!companyId) return;
+
   try {
     await companyService.deleteCompany(companyId);
 
     if (selectedCompany.value && selectedCompany.value.id === companyId) {
       selectedCompany.value = null;
-      ruleForm.companyId = null;
+      ruleForm.company_id = null;
     }
 
     await loadCompanies();
@@ -136,35 +199,100 @@ const handleCompanyDeleted = async (companyId) => {
   }
 };
 
+const updateVacancyCompetencies = () => {
+  try {
+    if (!competencyLevels.value || !selectedCompetencies.value) {
+      ruleForm.vacancy_competencies = [];
+      return;
+    }
+
+    ruleForm.vacancy_competencies = Object.entries(competencyLevels.value)
+        .filter(([competence_id]) => {
+          const id = parseInt(competence_id);
+          return !isNaN(id) && selectedCompetencies.value.includes(id);
+        })
+        .map(([competence_id, level]) => {
+          const uiLevel = level;
+          const backendLevel = convertLevelToBackendValue(uiLevel);
+
+          console.log(`Компетенция ${competence_id}: UI уровень ${uiLevel} -> бэкенд уровень ${backendLevel}`);
+
+          return {
+            competence_id: competence_id.toString(),
+            level: backendLevel
+          };
+        });
+
+    console.log('Обновленные компетенции вакансии:', JSON.stringify(ruleForm.vacancy_competencies, null, 2));
+  } catch (error) {
+    console.error('Ошибка при обновлении компетенций:', error);
+    ruleForm.vacancy_competencies = [];
+  }
+};
+
 const onCompetenciesChange = (value) => {
-  selectedCompetencies.value = value;
-
-  value.forEach(competenceId => {
-    if (!competencyLevels.value[competenceId]) {
-      competencyLevels.value[competenceId] = 1;
+  try {
+    if (!Array.isArray(value)) {
+      value = [];
     }
-  });
 
-  Object.keys(competencyLevels.value).forEach(competenceId => {
-    if (!value.includes(parseInt(competenceId))) {
-      delete competencyLevels.value[competenceId];
+    if (!competencyLevels.value) {
+      competencyLevels.value = {};
     }
-  });
 
-  ruleForm.competencies = value;
+    value.forEach(competenceId => {
+      if (competenceId && !competencyLevels.value[competenceId]) {
+        competencyLevels.value[competenceId] = 1;
+      }
+    });
+
+    if (competencyLevels.value) {
+      Object.keys(competencyLevels.value).forEach(competenceId => {
+        const id = parseInt(competenceId);
+        if (!isNaN(id) && !value.includes(id)) {
+          delete competencyLevels.value[competenceId];
+        }
+      });
+    }
+    selectedCompetencies.value = value;
+    updateVacancyCompetencies();
+  } catch (error) {
+    console.error('Ошибка при изменении компетенций:', error);
+  }
+};
+
+const handleCompetencyLevelChange = (competenceId, level) => {
+  try {
+    if (!competencyLevels.value) {
+      competencyLevels.value = {};
+    }
+
+    if (competenceId) {
+      competencyLevels.value[competenceId] = level;
+      updateVacancyCompetencies();
+    }
+  } catch (error) {
+    console.error('Ошибка при изменении уровня компетенции:', error);
+  }
 };
 
 const getCompetenceName = (competenceId) => {
-  const competence = availableCompetencies.value.find(c => c.id === competenceId);
-  return competence ? competence.name : '';
+  try {
+    if (!competenceId || !availableCompetencies.value) return '';
+
+    const competence = availableCompetencies.value.find(c => c && c.id === competenceId);
+    return competence ? competence.name : '';
+  } catch (error) {
+    console.error('Ошибка при получении имени компетенции:', error);
+    return '';
+  }
 };
 
 const formatCompetencyLevel = (val) => {
   const levels = ['Начальный', 'Средний', 'Продвинутый'];
-  return levels[val - 1];
+  return levels[val - 1] || 'Начальный';
 };
 
-// Отправка формы
 const submitForm = async (formEl) => {
   if (!formEl) return;
 
@@ -172,19 +300,20 @@ const submitForm = async (formEl) => {
     if (valid) {
       isLoading.value = true;
       try {
+        updateVacancyCompetencies(); // Обновляем vacancy_competencies с конвертацией уровней
         const vacancyData = {
-          title: ruleForm.title,
+          name: ruleForm.name,
           description: ruleForm.description,
           url: ruleForm.url,
           location: ruleForm.location,
-          companyId: ruleForm.companyId,
-          competencies: competencyLevels.value
+          company_id: ruleForm.company_id,
+          vacancy_competencies: ruleForm.vacancy_competencies
         };
+        console.log('Отправляем данные вакансии:', JSON.stringify(vacancyData, null, 2));
 
         await vacancyService.createVacancy(vacancyData);
         ElMessage.success('Вакансия успешно создана!');
-        console.log('Объект создан')
-        console.log(vacancyData)
+        console.log('Объект создан');
         router.push('/hr-page');
       } catch (error) {
         console.error('Ошибка при создании вакансии:', error);
@@ -207,15 +336,15 @@ const cancel = () => {
   <div class="create-vacancy">
     <h2>Создание вакансии</h2>
     <div class="form-group">
-      <el-form 
-        :model="ruleForm" 
-        :rules="rules" 
-        label-width="auto" 
-        ref="ruleFormRef"
-        status-icon
+      <el-form
+          :model="ruleForm"
+          :rules="rules"
+          label-width="auto"
+          ref="ruleFormRef"
+          status-icon
       >
-        <el-form-item label="Название должности" prop="title">
-          <el-input v-model="ruleForm.title"/>
+        <el-form-item label="Название должности" prop="name">
+          <el-input v-model="ruleForm.name"/>
         </el-form-item>
 
         <el-form-item label="Описание" prop="description">
@@ -238,7 +367,7 @@ const cancel = () => {
         </el-form-item>
 
         <!-- Выбор компании -->
-        <el-form-item label="Компания" prop="companyId">
+        <el-form-item label="Компания" prop="company_id">
           <p v-if="selectedCompany">{{ selectedCompany.name }}</p>
           <el-button @click="openSelectCompanyModal">
             {{ selectedCompany ? 'Изменить компанию' : 'Выбрать компанию' }}
@@ -255,22 +384,29 @@ const cancel = () => {
         </el-form-item>
 
         <!-- Компетенции -->
-        <el-form-item label="Компетенции" prop="competencies">
-          <el-select
-              v-model="selectedCompetencies"
-              multiple
-              placeholder="Выберите компетенции"
-              @change="onCompetenciesChange"
-          >
-            <el-option
-                v-for="competence in availableCompetencies"
-                :key="competence.id"
-                :label="competence.name"
-                :value="competence.id"
-            />
-          </el-select>
+        <el-form-item label="Компетенции" prop="vacancy_competencies">
+          <div class="competencies-header">
+            <el-select
+                v-model="selectedCompetencies"
+                multiple
+                placeholder="Выберите компетенции"
+                @change="onCompetenciesChange"
+                style="flex-grow: 1;"
+                clearable
+            >
+              <el-option
+                  v-for="competence in availableCompetencies"
+                  :key="competence.id"
+                  :label="competence.name"
+                  :value="competence.id"
+              />
+            </el-select>
+            <el-button @click="openCompetencyModal" type="primary" size="small">
+              Добавить новую компетенцию
+          </el-button>
+    </div>
 
-          <div v-if="selectedCompetencies.length > 0" class="competency-levels">
+          <div v-if="selectedCompetencies && selectedCompetencies.length > 0" class="competency-levels">
             <p>Уровни компетенций:</p>
             <div v-for="competenceId in selectedCompetencies" :key="competenceId" class="competence-level">
               <span>{{ getCompetenceName(competenceId) }}:</span>
@@ -280,8 +416,9 @@ const cancel = () => {
                   :max="3"
                   show-tooltip
                   :format-tooltip="formatCompetencyLevel"
+                  @change="(value) => handleCompetencyLevelChange(competenceId, value)"
               />
-            </div>
+  </div>
           </div>
         </el-form-item>
 
@@ -294,9 +431,15 @@ const cancel = () => {
       </el-form>
 
       <!-- Модальное окно для создания компании -->
-      <AddCompanyModal 
-        v-model="companyModalVisible" 
-        @company-created="handleCompanyCreated"
+      <AddCompanyModal
+          v-model="companyModalVisible"
+          @company-created="handleCompanyCreated"
+      />
+
+      <!-- Модальное окно для создания компетенции -->
+      <AddCompetencyModal
+          v-model="competencyModalVisible"
+          @competency-created="handleCompetencyCreated"
       />
     </div>
   </div>
@@ -310,6 +453,15 @@ const cancel = () => {
 .form-group {
   width: 80%;
   margin: 0 auto;
+}
+
+.competencies-header {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 10px;
 }
 
 .competency-levels {

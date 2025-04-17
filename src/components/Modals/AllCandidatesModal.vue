@@ -15,7 +15,7 @@ defineProps({
 const emit = defineEmits(['close']);
 
 const closeModal = () => {
-  emit('close'); // Emit-им событие 'close' для закрытия модального окна
+  emit('close');
 };
 </script>
 
@@ -49,7 +49,7 @@ const closeModal = () => {
   display: flex;
   justify-content: center;
   align-items: center;
-  z-index: 1000; /* Убедитесь, что модальное окно поверх всего */
+  z-index: 1000;
 }
 
 .modal {
@@ -69,7 +69,7 @@ const closeModal = () => {
 
 .modal-body {
   height: 80%;
-  display: flex; /* Добавляем flex-контейнер */
+  display: flex;
   flex-direction: column;
 }
 </style>

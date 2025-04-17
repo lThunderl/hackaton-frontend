@@ -14,11 +14,11 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:model-value', 'company-selected', 'company-created', 'company-deleted']);
+const emit = defineEmits(['update:modelValue', 'company-selected', 'company-created', 'company-deleted']);
 
 const isVisible = computed({
   get: () => props.modelValue,
-  set: (value) => emit('update:model-value', value)
+  set: (value) => emit('update:modelValue', value)
 });
 
 const loading = ref(false);
@@ -39,7 +39,7 @@ const filteredCompanies = computed(() => {
 });
 
 const handleClose = () => {
-  emit('update:model-value', false);
+  emit('update:modelValue', false);
   searchQuery.value = '';
 };
 
@@ -82,27 +82,27 @@ const deleteCompany = async () => {
 
 <template>
   <el-dialog
-    v-model="isVisible"
-    title="Выбор компании"
-    @close="handleClose"
-    width="60%"
+      v-model="isVisible"
+      title="Выбор компании"
+      @close="handleClose"
+      width="60%"
   >
     <div class="search-container">
       <el-input
-        v-model="searchQuery"
-        placeholder="Поиск компании..."
-        prefix-icon="el-icon-search"
-        clearable
+          v-model="searchQuery"
+          placeholder="Поиск компании..."
+          prefix-icon="el-icon-search"
+          clearable
       />
     </div>
-    
+
     <div class="company-list">
       <el-table
-        :data="filteredCompanies"
-        style="width: 100%"
-        height="400"
-        @row-click="selectCompany"
-        v-loading="loading"
+          :data="filteredCompanies"
+          style="width: 100%"
+          height="400"
+          @row-click="selectCompany"
+          v-loading="loading"
       >
         <el-table-column prop="name" label="Название компании" />
         <el-table-column label="Действия" width="200">
@@ -130,9 +130,9 @@ const deleteCompany = async () => {
 
   <!-- Диалог подтверждения удаления -->
   <el-dialog
-    v-model="deleteConfirmVisible"
-    title="Подтверждение удаления"
-    width="30%"
+      v-model="deleteConfirmVisible"
+      title="Подтверждение удаления"
+      width="30%"
   >
     <span>Вы уверены, что хотите удалить компанию "{{ companyToDelete?.name }}"?</span>
     <template #footer>

@@ -39,9 +39,10 @@ const dialogVisible = computed({
 });
 
 onMounted(async () => {
-  if (props.vacancy.companyId) {
+  const companyId = props.vacancy.company_id || props.vacancy.companyId;
+  if (companyId) {
     try {
-      company.value = await companyService.getCompanyById(props.vacancy.companyId);
+      company.value = await companyService.getCompanyById(companyId);
     } catch (error) {
       console.error('Ошибка при загрузке информации о компании:', error);
     }
@@ -52,9 +53,20 @@ const handleClose = () => {
   emit('close');
 };
 
-const editVacancy = () => {
-  router.push({name: 'EditVacancy', params: {id: props.vacancy.id}});
-  handleClose();
+const editVacancy = async () => {
+  try {
+    const fullVacancy = await vacancyService.getVacancyById(props.vacancy.id);
+
+    router.push({
+      name: 'EditVacancy',
+      params: {id: props.vacancy.id},
+      state: { vacancy: fullVacancy || props.vacancy }
+    });
+    handleClose();
+  } catch (error) {
+    console.error('Ошибка при подготовке к редактированию вакансии:', error);
+    ElMessage.error('Не удалось открыть страницу редактирования. Пожалуйста, попробуйте снова.');
+  }
 };
 
 const confirmDelete = () => {
@@ -64,10 +76,10 @@ const confirmDelete = () => {
 const deleteVacancy = async () => {
   isDeleting.value = true;
   try {
-    await vacancyService.deleteVacancy(props.vacancy.id);
+    await vacancyService.deleteVacancy(props.vacancy?.id);
     ElMessage.success('Вакансия успешно удалена');
     deleteConfirmVisible.value = false;
-    emit('vacancy-deleted', props.vacancy.id);
+    emit('vacancy-deleted', props.vacancy?.id);
     handleClose();
   } catch (error) {
     console.error('Ошибка при удалении вакансии:', error);
@@ -77,33 +89,53 @@ const deleteVacancy = async () => {
   }
 };
 
-// Метод для получения компетенций в правильном формате для отображения
 const formattedCompetencies = computed(() => {
-  // Если у вакансии есть обработанные данные компетенций
+  if (props.vacancy?.vacancy_competencies && props.vacancy.vacancy_competencies.length > 0) {
+    return props.vacancy.vacancy_competencies.map(comp => ({
+      id: comp.competence_id,
+      name: comp.name || getCompetenceName(comp.competence_id),
+      level: comp.level
+    }));
+  }
+
   if (props.vacancy.competenciesData && props.vacancy.competenciesData.length > 0) {
     return props.vacancy.competenciesData;
   }
 
-  // Если компетенции представлены как массив строк (как в исходных мок-данных)
   if (Array.isArray(props.vacancy.requirements)) {
     return props.vacancy.requirements.map(req => ({name: req}));
   }
 
-  // Если компетенции представлены как объект с ID и уровнем
-  if (props.vacancy.competencies && typeof props.vacancy.competencies === 'object' && !Array.isArray(props.vacancy.competencies)) {
-    // Возвращаем пустой массив, так как без данных о компетенциях мы не можем отобразить их названия
-    return [];
+  if (props.vacancy?.competencies && typeof props.vacancy.competencies === 'object' && !Array.isArray(props.vacancy.competencies)) {
+    return Object.entries(props.vacancy.competencies).map(([id, level]) => ({
+      id: parseInt(id),
+      name: getCompetenceName(parseInt(id)),
+      level: level
+    }));
   }
 
-  // Если компетенции представлены как массив строк в поле competencies
-  if (Array.isArray(props.vacancy.competencies)) {
-    return props.vacancy.competencies.map(comp => ({name: comp}));
+  if (Array.isArray(props.vacancy?.competencies)) {
+    return props.vacancy?.competencies.map(comp => ({name: comp}));
   }
 
   return [];
 });
 
-// Определяем уровни компетенций для отображения
+const convertLevelToCategory = (level) => {
+  if (level >= 8) return 3; // высокий
+  if (level >= 6) return 2; // средний
+  if (level >= 3) return 1; // низкий
+  return 0; // не отображать
+};
+
+const shouldDisplayLevel = (level) => {
+  return level >= 3;
+};
+
+const getCompetenceName = (id) => {
+  return `${id}`;
+};
+
 const competencyLevels = ['Начальный', 'Средний', 'Продвинутый'];
 </script>
 
@@ -111,7 +143,7 @@ const competencyLevels = ['Начальный', 'Средний', 'Продви�
   <div class="vacancy-details-dialog">
     <el-dialog
         v-model="dialogVisible"
-        :title="vacancy.title"
+        :title="vacancy.name || vacancy.title"
         width="80%"
         center
         @close="handleClose"
@@ -120,7 +152,7 @@ const competencyLevels = ['Начальный', 'Средний', 'Продви�
       <div class="vacancy-details">
         <div class="vacancy-info">
           <h3>Описание вакансии</h3>
-          <p>{{ vacancy.description }}</p>
+          <p class="vacancy-description">{{ vacancy.description }}</p>
 
           <div class="vacancy-meta">
             <div class="meta-item" v-if="vacancy.location">
@@ -153,13 +185,13 @@ const competencyLevels = ['Начальный', 'Средний', 'Продви�
               <template v-if="formattedCompetencies.length > 0">
                 <div v-for="comp in formattedCompetencies" :key="comp.id || comp.name" class="competency-item">
                   <el-tooltip
-                      v-if="comp.level"
-                      :content="'Уровень: ' + competencyLevels[comp.level - 1]"
+                      v-if="comp.level && shouldDisplayLevel(comp.level)"
+                      :content="'Уровень: ' + competencyLevels[convertLevelToCategory(comp.level) - 1] + ', ' + comp.level"
                       placement="top"
                   >
                     <el-tag type="success" class="competency-tag">
                       {{ comp.name }}
-                      <span class="level-indicator">{{ comp.level }}</span>
+                      <span class="level-indicator">{{ convertLevelToCategory(comp.level) }}</span>
                     </el-tag>
                   </el-tooltip>
 
@@ -206,7 +238,7 @@ const competencyLevels = ['Начальный', 'Средний', 'Продви�
       width="30%"
       center
     >
-      <span>Вы уверены, что хотите удалить вакансию "{{ vacancy.title }}"?</span>
+      <span>Вы уверены, что хотите удалить вакансию "{{ vacancy.name || vacancy.title }}"?</span>
       <template #footer>
         <span class="dialog-footer">
           <el-button @click="deleteConfirmVisible = false">Отмена</el-button>
@@ -227,7 +259,7 @@ const competencyLevels = ['Начальный', 'Средний', 'Продви�
 
 :deep(.el-dialog__body) {
   overflow-y: auto;
-  max-height: calc(90vh - 120px); /* Вычитаем примерную высоту заголовка и футера */
+  max-height: calc(90vh - 120px);
   padding-right: 15px;
 }
 
@@ -268,6 +300,10 @@ const competencyLevels = ['Начальный', 'Средний', 'Продви�
 
 .meta-item p {
   margin: 5px 0;
+}
+
+.vacancy-description {
+  white-space: pre-wrap;
 }
 
 .competencies-section {

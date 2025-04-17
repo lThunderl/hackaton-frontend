@@ -1,72 +1,116 @@
-import { ref } from 'vue';
+import {ref} from 'vue';
 
-// Имитация данных компаний
-const mockCompanies = [
-  { id: 1, name: 'Google', description: 'Технологический гигант' },
-  { id: 2, name: 'Microsoft', description: 'Разработка программного обеспечения' },
-  { id: 3, name: 'Amazon', description: 'Электронная коммерция и облачные сервисы' },
-];
+const BASE_URL = 'http://localhost:8080/company';
 
-// Локальное хранилище компаний
-const companies = ref([...mockCompanies]);
+const companies = ref([]);
 
 const companyService = {
-  // Получить все компании
-  getAllCompanies() {
-    return Promise.resolve([...companies.value]);
-  },
+    // Получить все компании
+    async getAllCompanies() {
+        try {
+            const response = await fetch(`${BASE_URL}/all`);
+            if (!response.ok) {
+                throw new Error(`Ошибка HTTP: ${response.status}`);
+            }
+            companies.value = await response.json();
+            return [...companies.value];
+        } catch (error) {
+            console.error("Ошибка при получении компаний:", error);
+            throw error;
+        }
+    },
 
-  // Поиск компаний по названию или описанию
-  searchCompanies(query) {
-    if (!query) {
-      return this.getAllCompanies();
-    }
+    // Получить компанию по ID
+    async getCompanyById(id) {
+        try {
+            const response = await fetch(`${BASE_URL}/${id}`);
+            if (!response.ok) {
+                if (response.status === 404) {
+                    return null;
+                }
+                throw new Error(`Ошибка HTTP: ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error(`Ошибка при получении компании с ID ${id}:`, error);
+            throw error;
+        }
+    },
 
-    const searchQuery = query.toLowerCase();
-    const result = companies.value.filter(company =>
-      company.name.toLowerCase().includes(searchQuery) ||
-      (company.description && company.description.toLowerCase().includes(searchQuery))
-    );
-    return Promise.resolve(result);
-  },
 
-  // Получить компанию по ID
-  getCompanyById(id) {
-    const company = companies.value.find(c => c.id === id);
-    return Promise.resolve(company || null);
-  },
+    // Создать новую компанию
+    async createCompany(companyData) {
+        try {
+            const response = await fetch(`${BASE_URL}/add`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(companyData),
+            });
 
-  // Создать новую компанию
-  createCompany(companyData) {
-    const newId = Math.max(0, ...companies.value.map(c => c.id)) + 1;
-    const newCompany = {
-      id: newId,
-      ...companyData
-    };
+            if (!response.ok) {
+                throw new Error(`Ошибка HTTP: ${response.status}`);
+            }
 
-    companies.value.push(newCompany);
-    return Promise.resolve(newCompany);
-  },
+            const newCompany = await response.json();
+            companies.value.push(newCompany);
+            return newCompany;
+        } catch (error) {
+            console.error("Ошибка при создании компании:", error);
+            throw error;
+        }
+    },
 
-  // Обновить существующую компанию
-  updateCompany(id, companyData) {
-    const index = companies.value.findIndex(c => c.id === id);
-    if (index !== -1) {
-      companies.value[index] = { ...companies.value[index], ...companyData };
-      return Promise.resolve(companies.value[index]);
-    }
-    return Promise.reject(new Error('Компания не найдена'));
-  },
+    // Обновить существующую компанию
+    async updateCompany(id, companyData) {
+        try {
+            const response = await fetch(`${BASE_URL}/update/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(companyData),
+            });
 
-  // Удалить компанию
-  deleteCompany(id) {
-    const index = companies.value.findIndex(c => c.id === id);
-    if (index !== -1) {
-      const deletedCompany = companies.value.splice(index, 1)[0];
-      return Promise.resolve(deletedCompany);
-    }
-    return Promise.reject(new Error('Компания не найдена'));
-  }
+            if (!response.ok) {
+                throw new Error(`Ошибка HTTP: ${response.status}`);
+            }
+
+            const updatedCompany = await response.json();
+
+            const index = companies.value.findIndex(c => c.id === id);
+            if (index !== -1) {
+                companies.value[index] = updatedCompany;
+            }
+            return updatedCompany;
+        } catch (error) {
+            console.error(`Ошибка при обновлении компании с ID ${id}:`, error);
+            throw error;
+        }
+    },
+
+    // Удалить компанию
+    async deleteCompany(id) {
+        try {
+            const response = await fetch(`${BASE_URL}/delete/${id}`, {
+                method: 'DELETE',
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            // Удаляем из локального списка компаний
+            const index = companies.value.findIndex(c => c.id === id);
+            if (index !== -1) {
+                companies.value.splice(index, 1);
+            }
+        } catch (error) {
+            console.error(`Ошибка при удалении компании с ID ${id}:`, error);
+            throw error;
+        }
+    },
 };
 
 export default companyService;

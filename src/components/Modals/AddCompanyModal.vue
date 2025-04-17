@@ -79,7 +79,7 @@ const resetForm = () => {
   <el-dialog v-model="isVisible" title="Создание компании" @close="handleClose">
     <el-form :model="newCompany" :rules="rules" ref="companyForm" label-width="140px" status-icon>
       <el-form-item label="Название компании" prop="name">
-        <el-input v-model.trim="newCompany.name" placeholder="Введите название компании" />
+        <el-input v-model="newCompany.name" placeholder="Введите название компании" />
       </el-form-item>
     </el-form>
     

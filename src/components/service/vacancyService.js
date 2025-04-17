@@ -1,113 +1,147 @@
-import { ref } from 'vue';
-import { mockVacancies, mockCandidates } from '@/utils/mockData';
 import competencyService from './competencyService';
 
-// Локальное хранилище вакансий
-const vacancies = ref([...mockVacancies]);
+const BASE_URL = 'http://localhost:8080/vacancy';
+
 
 const vacancyService = {
   // Получить все вакансии
   async getAllVacancies() {
-    // Получаем все компетенции для преобразования ID в названия
-    const competencies = await competencyService.getAllCompetencies();
-    
-    return Promise.resolve(vacancies.value.map(vacancy => {
-      // Если у вакансии есть компетенции в формате объекта с ID и уровнем
-      if (vacancy.competencies && typeof vacancy.competencies === 'object' && !Array.isArray(vacancy.competencies)) {
-        const formattedCompetencies = [];
-        
-        // Преобразуем объект компетенций в массив объектов с названием и уровнем
-        for (const [competencyId, level] of Object.entries(vacancy.competencies)) {
-          const competency = competencies.find(c => c.id === parseInt(competencyId));
-          if (competency) {
-            formattedCompetencies.push({
-              id: competency.id,
-              name: competency.name,
-              level: level
-            });
-          }
-        }
-        
-        return {
-          ...vacancy,
-          competenciesData: formattedCompetencies // Добавляем новое поле с данными компетенций
-        };
+    try {
+      const response = await fetch(`${BASE_URL}/all`);
+      if (!response.ok) {
+        throw new Error(`Ошибка HTTP: ${response.status}`);
       }
-      
-      // Если компетенции представлены как массив строк (как в исходных мок-данных)
-      return vacancy;
-    }));
+      const vacancies = await response.json();
+
+      const competencies = await competencyService.getAllCompetencies();
+      return vacancies.map(vacancy => this.formatVacancyCompetencies(vacancy, competencies));
+    } catch (error) {
+      console.error("Ошибка при получении вакансий:", error);
+      throw error;
+    }
   },
 
   // Получить вакансию по ID
   async getVacancyById(id) {
-    const vacancy = vacancies.value.find(v => v.id === id);
-    if (!vacancy) return null;
-    
-    // Получаем все компетенции для преобразования ID в названия
-    const competencies = await competencyService.getAllCompetencies();
-    
-    // Если у вакансии есть компетенции в формате объекта с ID и уровнем
+    try {
+      const response = await fetch(`${BASE_URL}/${id}`);
+      if (!response.ok) {
+        throw new Error(`Ошибка при получении вакансии с id ${id}: ${response.status} ${response.statusText}`);
+      }
+      const vacancy = await response.json();
+
+      const competencies = await competencyService.getAllCompetencies();
+      return this.formatVacancyCompetencies(vacancy, competencies);
+    } catch (error) {
+      console.error(`Ошибка при получении вакансии с id ${id}:`, error);
+      throw error;
+    }
+  },
+
+  async createVacancy(vacancyData) {
+    try {
+      const response = await fetch(`${BASE_URL}/create`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(vacancyData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ошибка при создании вакансии: ${response.status} ${response.statusText}`);
+      }
+
+      const newVacancy = await response.json();
+      return newVacancy;
+    } catch (error) {
+      console.error("Ошибка при создании вакансии:", error);
+      throw error;
+    }
+  },
+
+  async updateVacancy(id, vacancyData) {
+    try {
+      const response = await fetch(`${BASE_URL}/update/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(vacancyData),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ошибка при обновлении вакансии: ${response.status} ${response.statusText}`);
+      }
+
+      const updatedVacancy = await response.json();
+      return updatedVacancy;
+    } catch (error) {
+      console.error(`Ошибка при обновлении вакансии с id ${id}:`, error);
+      throw error;
+    }
+  },
+
+  async updateVacancyCompetencies(id, competenciesData) {
+    try {
+      console.log(`Отправка компетенций на сервер: ${JSON.stringify(competenciesData)}`);
+      const response = await fetch(`${BASE_URL}/update/competence/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(competenciesData),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Ошибка при обновлении компетенций вакансии: ${response.status} ${response.statusText}. ${errorText}`);
+      }
+
+      const updatedVacancy = await response.json();
+      return updatedVacancy;
+    } catch (error) {
+      console.error(`Ошибка при обновлении компетенций вакансии с id ${id}:`, error);
+      throw error;
+    }
+  },
+
+  async deleteVacancy(id) {
+    try {
+      const response = await fetch(`${BASE_URL}/delete/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ошибка при удалении вакансии: ${response.status} ${response.statusText}`);
+      }
+      return response.status;
+    } catch (error) {
+      console.error(`Ошибка при удалении вакансии с id ${id}:`, error);
+      throw error;
+    }
+  },
+
+  formatVacancyCompetencies(vacancy, competencies) {
     if (vacancy.competencies && typeof vacancy.competencies === 'object' && !Array.isArray(vacancy.competencies)) {
       const formattedCompetencies = [];
-      
       for (const [competencyId, level] of Object.entries(vacancy.competencies)) {
         const competency = competencies.find(c => c.id === parseInt(competencyId));
         if (competency) {
           formattedCompetencies.push({
             id: competency.id,
             name: competency.name,
-            level: level
+            level: level,
           });
         }
       }
-      
       return {
         ...vacancy,
-        competenciesData: formattedCompetencies
+        competenciesData: formattedCompetencies,
       };
     }
-    
     return vacancy;
   },
-
-  // Создать новую вакансию
-  createVacancy(vacancyData) {
-    const newId = Math.max(0, ...vacancies.value.map(v => v.id)) + 1;
-    const newVacancy = {
-      id: newId,
-      ...vacancyData
-    };
-    
-    vacancies.value.push(newVacancy);
-    return Promise.resolve(newVacancy);
-  },
-
-  // Обновить существующую вакансию
-  updateVacancy(id, vacancyData) {
-    const index = vacancies.value.findIndex(v => v.id === id);
-    if (index !== -1) {
-      vacancies.value[index] = { ...vacancies.value[index], ...vacancyData };
-      return Promise.resolve(vacancies.value[index]);
-    }
-    return Promise.reject(new Error('Вакансия не найдена'));
-  },
-
-  // Удалить вакансию
-  deleteVacancy(id) {
-    const index = vacancies.value.findIndex(v => v.id === id);
-    if (index !== -1) {
-      const deletedVacancy = vacancies.value.splice(index, 1)[0];
-      return Promise.resolve(deletedVacancy);
-    }
-    return Promise.reject(new Error('Вакансия не найдена'));
-  },
-
-  // Получить кандидатов по ID вакансии
-  getCandidatesByVacancyId(vacancyId) {
-    const candidates = mockCandidates.filter(candidate => candidate.vacancyId === vacancyId);
-    return Promise.resolve(candidates);
-  }
 };
 
 export default vacancyService;

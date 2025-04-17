@@ -17,26 +17,54 @@ const props = defineProps({
 const emit = defineEmits(['click']);
 
 const formattedCompetencies = computed(() => {
-  if (props.vacancy.competenciesData && props.vacancy.competenciesData.length > 0) {
+  if (props.vacancy?.vacancy_competencies && props.vacancy.vacancy_competencies.length > 0) {
+    return props.vacancy.vacancy_competencies.map(comp => ({
+      id: comp.competence_id,
+      name: comp.competence_name || getCompetenceName(comp.competence_id),
+      level: comp.level
+    }));
+  }
+
+  if (props.vacancy?.competenciesData && props.vacancy.competenciesData.length > 0) {
     return props.vacancy.competenciesData;
   }
-  
+
   if (Array.isArray(props.vacancy.requirements)) {
     return props.vacancy.requirements.map(req => ({ name: req }));
   }
-  
+
   if (props.vacancy.competencies && typeof props.vacancy.competencies === 'object' && !Array.isArray(props.vacancy.competencies)) {
-    return [];
+
+    return Object.entries(props.vacancy.competencies).map(([id, level]) => ({
+      id: parseInt(id),
+      name: getCompetenceName(parseInt(id)),
+      level: level
+    }));
   }
-  
+
   if (Array.isArray(props.vacancy.competencies)) {
     return props.vacancy.competencies.map(comp => ({ name: comp }));
   }
-  
+
   return [];
 });
 
+const getCompetenceName = (id) => {
+  return `${id}`;
+};
+
 const competencyLevels = computed(() => ['Начальный', 'Средний', 'Продвинутый']);
+
+const convertLevelToCategory = (level) => {
+  if (level >= 8) return 3;
+  if (level >= 6) return 2;
+  if (level >= 3) return 1;
+  return 0; // не отображать
+};
+
+const shouldDisplayLevel = (level) => {
+  return level >= 3;
+};
 
 const handleCardClick = () => {
   emit('click', props.vacancy);
@@ -44,35 +72,33 @@ const handleCardClick = () => {
 </script>
 
 <template>
-  <el-card 
-    shadow="hover" 
-    class="vacancy-card"
-    @click="handleCardClick"
+  <el-card
+      shadow="hover"
+      class="vacancy-card"
+      @click="handleCardClick"
   >
     <div>
-      <h3>{{ vacancy.title }}</h3>
-      <p>{{ vacancy.description }}</p>
+      <h3>{{ vacancy.name || vacancy.title }}</h3>
+      <p class="description truncate-text">{{ vacancy.description }}</p>
       <h4>Компетенции:</h4>
       <div class="tag">
-        <!-- Отображаем компетенции с уровнем, если он есть -->
         <template v-for="comp in formattedCompetencies" :key="comp.id || comp.name">
-          <el-tooltip 
-            v-if="comp.level" 
-            :content="'Уровень: ' + competencyLevels[comp.level - 1]" 
-            placement="top"
+          <el-tooltip
+              v-if="comp.level && shouldDisplayLevel(comp.level)"
+              :content="'Уровень: ' + competencyLevels[convertLevelToCategory(comp.level) - 1] + ', ' + comp.level"
+              placement="top"
           >
             <el-tag type="success" class="competency-tag">
               {{ comp.name }}
-              <span class="level-indicator">{{ comp.level }}</span>
+              <span class="level-indicator">{{ convertLevelToCategory(comp.level) }}</span>
             </el-tag>
           </el-tooltip>
-          
+
           <el-tag v-else type="success" class="competency-tag">
             {{ comp.name }}
           </el-tag>
         </template>
-        
-        <!-- Если компетенций нет, показываем сообщение -->
+
         <p v-if="formattedCompetencies.length === 0">Компетенции не указаны</p>
       </div>
       <div class="candidates">
@@ -110,6 +136,19 @@ h3 {
   margin-top: 0;
 }
 
+.description {
+  margin-bottom: 10px;
+}
+
+.truncate-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-height: 3em; /* Примерно 2 строки текста */
+}
+
 ul {
   list-style-type: disc;
   padding-left: 20px;
@@ -129,6 +168,7 @@ ul {
   display: inline-flex;
   align-items: center;
   gap: 5px;
+
 }
 
 .level-indicator {
