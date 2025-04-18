@@ -157,7 +157,7 @@ export function dragOver(e) {
           throw new Error(`HTTP error! Status: ${response.status}`);
         }
         
-        const data = response.JSON()
+        const data = response.json()
 
         return data
 

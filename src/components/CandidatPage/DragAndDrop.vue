@@ -200,7 +200,7 @@ export default {
         @click="removeFile(index)" type="danger" plain  v-if="files.length !== 0">Удалить</el-button>
       </ul>
     </div>
-    <el-button plain @click="uploadFiles" :disabled="!files.length" class="upload" type="success" style="margin-bottom: 20px;">Загрузить 
+    <el-button plain @click="test" :disabled="!files.length" class="upload" type="success" style="margin-bottom: 20px;">Загрузить 
     </el-button>
   </div>
 </div>
