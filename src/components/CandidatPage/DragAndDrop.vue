@@ -85,12 +85,13 @@ export default {
     openFileDialog,
     onFileSelected,
     removeFile,
-    uploadFiles() {
+    async uploadFiles() {
       if (this.first_name == '' || this.last_name == ''){
         return ElMessage('Введите Имя и Фамилию')
       }
       else{
-      const info = uploadFiles(this.files, this.first_name, this.last_name, this.uploading, this.error, this);
+      const info = await uploadFiles(this.files, this.first_name, this.last_name, this.uploading, this.error, this);
+      console.log(info)
       this.isModalActive = true;
       this.skills = info.skills 
       this.mails = info.emails
@@ -199,7 +200,7 @@ export default {
         @click="removeFile(index)" type="danger" plain  v-if="files.length !== 0">Удалить</el-button>
       </ul>
     </div>
-    <el-button plain @click="test" :disabled="!files.length" class="upload" type="success" style="margin-bottom: 20px;">Загрузить 
+    <el-button plain @click="uploadFiles" :disabled="!files.length" class="upload" type="success" style="margin-bottom: 20px;">Загрузить 
     </el-button>
   </div>
 </div>

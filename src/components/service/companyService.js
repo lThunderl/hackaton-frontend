@@ -1,6 +1,11 @@
 import {ref} from 'vue';
 
-const BASE_URL = 'http://localhost:8080/company';
+const PORT = 8000;
+const HOST = process.env.VUE_APP_BACKEND_HOST || "localhost";
+
+const IP = `${HOST}:${PORT}`;
+
+const BASE_URL = `http://${IP}/company`;
 
 const companies = ref([]);
 

@@ -1,6 +1,12 @@
 import competencyService from './competencyService';
 
-const BASE_URL = 'http://localhost:8080/vacancy';
+
+const PORT = 8000;
+const HOST = process.env.VUE_APP_BACKEND_HOST || "localhost";
+
+const IP = `${HOST}:${PORT}`;
+
+const BASE_URL = `http://${IP}/vacancy`;
 
 
 const vacancyService = {

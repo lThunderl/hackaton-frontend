@@ -20,7 +20,7 @@ const formattedCompetencies = computed(() => {
   if (props.vacancy?.vacancy_competencies && props.vacancy.vacancy_competencies.length > 0) {
     return props.vacancy.vacancy_competencies.map(comp => ({
       id: comp.competence_id,
-      name: comp.competence_name || getCompetenceName(comp.competence_id),
+      name: comp.name || getCompetenceName(comp.name),
       level: comp.level
     }));
   }
