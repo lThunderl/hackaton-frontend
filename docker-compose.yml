@@ -2,9 +2,50 @@ version: "3.8"
 name: Vue
 
 services:
-  vuejs:
-  
+  vuejs-competence-sync:
+    image: lthunderl/vuejs-hackaton:latest
     ports:
-      - 8081
+      - "8081:8080"
     environment:
-      - BACKEND_HOST: 'localhost'
+      - VUE_APP_BACKEND_HOST=competence-sync-backend
+    networks:
+      - vue-network
+
+  competence-sync-db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER: admin
+      - POSTGRES_PASSWORD: admin
+      - POSTGRES_DB: competence-sync
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - vue-network
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U admin -d competence-sync'" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  competence-sync-backend:
+    image: mta2003/competence-sync-backend:latest
+    ports:
+      - "8000:8000"
+    environment:
+      - POSTGRES_USER: admin
+      - POSTGRES_PASSWORD: admin
+      - POSTGRES_DB: competence-sync
+      - POSTGRES_HOST: competence-sync-db
+      - POSTGRES_PORT: 5432
+    depends_on:
+      competence-sync-db:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+
+networks:
+  vue-network:
+    driver: bridge
