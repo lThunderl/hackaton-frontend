@@ -1,3 +1,5 @@
+import { ElMessage } from "element-plus";
+
 export function dragOver(e) {
     e.preventDefault();
   }
@@ -153,7 +155,7 @@ export function dragOver(e) {
         return data
 
       } catch (error) {
-        return alert('Ошибка отправки данных');
+        return ElMessage('Ошибка отправки данных');
         
       } finally {
         componentContext.uploading = false;
@@ -161,6 +163,6 @@ export function dragOver(e) {
     } 
 
     else {
-      alert('Сначала необходимо заполнить поля: "Имя" и "Фамилия"');
+      ElMessage('Сначала необходимо заполнить поля: "Имя" и "Фамилия"');
   }
 }

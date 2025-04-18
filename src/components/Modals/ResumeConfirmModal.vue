@@ -67,7 +67,7 @@ export default {
 </script>
 
 <template>
-    <div v-if="this.dataChecked == false" class="modal" style="margin-top: 20px;" :class="{ 'is-active': isModalActive }">
+    <div v-if="this.dataChecked == false" class="modal" :class="{ 'is-active': isModalActive }">
       <div class="modal-background" @click="closeModal"></div>
       <div class="modal-content">
         <div class="box">
@@ -157,11 +157,12 @@ export default {
           ">
           Закрыть
         </el-button>
+        <div class="bottom"></div>
         </div>
       </div>
       </div>
     </div>
-    <div v-else class="modal">
+    <div v-else class="modal1">
       <h1 style="padding-bottom: 20px; margin-left: 20px;">Подходящие вакансии:</h1>
     <div style="display: flex; flex-direction: row; gap: 20px; margin-left: 20px;">
       <VacancyCard
@@ -177,6 +178,17 @@ export default {
         {{ learn_skill }}
       </li>
     </ul>
+    <el-button 
+          @click="closeModal"
+          class="bottomBtn"
+          style="position: relative; 
+          left: 49.1%; 
+          transform: translate(-50%, 0%);
+          margin-bottom: 40px;
+          width: 20%;
+          ">
+          Закрыть
+        </el-button>
     </div>
   </template>
   
@@ -194,7 +206,7 @@ export default {
     margin-top: 20px;
   }
 
-  .modal {
+  .modal1 {
     position: fixed;
     top: 0;
     left: 0;
@@ -202,7 +214,21 @@ export default {
     overflow: auto;
     overflow-y: scroll;
     height: 100vh;
-    max-height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    background-color: white;
+  }
+
+  .modal {
+    padding-top: 30px;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    overflow: auto;
+    height: 100vh;
     background-color: rgba(0, 0, 0, 0.5);
     justify-content: center;
     align-items: center;
@@ -218,6 +244,7 @@ export default {
     position: absolute;
     width: 100%;
     height: 100vh;
+
     background-color: white;
   }
   
@@ -263,4 +290,28 @@ export default {
     min-height: 100px;
   }
 
+  .bottom{
+    margin-bottom: 40px;
+  }
+
+  @media screen and (min-width: 1110px) and (max-width: 1400px){
+    .modal{
+      padding-top: 40px;
+    }
+  }
+    @media screen and (max-width: 1100px) and (min-width: 900px){
+      .modal{
+        padding-top: 70px;
+      }
+    }
+    @media screen and (max-width: 900px) and (min-width: 800px){
+      .modal{
+        padding-top: 90px
+      }
+    }
+    @media screen and (max-width: 800px) and (min-width: 700px){
+      .modal{
+        padding-top: 120px
+      }
+    }
   </style>
