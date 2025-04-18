@@ -79,8 +79,9 @@ const handleVacancyDeleted = (vacancyId) => {
       <el-button type="primary" @click="goToCreateVacancy">
         Добавить вакансию
       </el-button>
+
     </div>
-    
+    <RouterLink to="/">К странице для канидидатов</RouterLink>
     <div v-if="isLoading" class="loading-container">
       <el-skeleton :rows="3" animated />
       <el-skeleton :rows="3" animated />

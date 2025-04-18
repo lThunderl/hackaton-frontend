@@ -13,10 +13,10 @@ import {
 
 import { ref } from 'vue'
 import ResumeConfirmModal from '../Modals/ResumeConfirmModal.vue';
-import InfoInputs from './InfoInputs.vue';
+import { ElMessage } from 'element-plus';
 export default {
 
-  components: { ResumeConfirmModal, InfoInputs },
+  components: { ResumeConfirmModal },
 
   setup(){
     return{
@@ -85,13 +85,19 @@ export default {
     openFileDialog,
     onFileSelected,
     removeFile,
-    uploadFiles() {
-      const info = uploadFiles(this.files, this.first_name, this.last_name, this.uploading, this.error, this);
+    async uploadFiles() {
+      if (this.first_name == '' || this.last_name == ''){
+        return ElMessage('Введите Имя и Фамилию')
+      }
+      else{
+      const info = await uploadFiles(this.files, this.first_name, this.last_name, this.uploading, this.error, this);
+      console.log(info)
       this.isModalActive = true;
       this.skills = info.skills 
       this.mails = info.emails
       this.URLS = info.urls
       this.phones = info.phones
+      }
     },
 
     handleFiles(fileList) {
@@ -106,6 +112,10 @@ export default {
       })
     },
     test(){
+      if (this.first_name == '' || this.last_name == ''){
+        return ElMessage('Введите Имя и Фамилию')
+      }
+      else{
       const info = test();
       this.skills = info.skills;
       this.phoneNumbers = info.phoneNumbers;
@@ -113,19 +123,9 @@ export default {
       this.urls = info.urls;
       this.isModalActive = true;
       this.checkSkills();
+      }
     },     
-    onPhoneNumberChanged(newPhoneNumber){
-      this.phoneNumber = newPhoneNumber;
-    },  
-    onEmailChanged(newEmail){
-      this.email = newEmail
-    },
-    onFirstNameChanged(newFirstName){
-      this.first_name = newFirstName
-    },
-    onLastNameChanged(newLastName){
-      this.last_name = newLastName
-    },
+
     testVacancyGet(){
       testVacancyGet()
     }
@@ -135,15 +135,27 @@ export default {
 
 <template>
 <h2 style="padding: 20px">Ваши данные:</h2>
+<RouterLink to="/hr-page" style="margin-left: 20px;">На страницу для HR</RouterLink>
 <div style="display: flex; flex-direction: column;">
   <div style="display: flex; flex-direction: row; width: 100%; padding: 0;">
     <form @submit.prevent="handleTextUpload" style="width: 25%">
-    <InfoInputs 
-    :first_name="first_name"
-    @first-name-changed="onFirstNameChanged"
-    :last_name="last_name"
-    @last-name-changed="onLastNameChanged"
-    />
+    <div 
+    class="user-name" >
+        <input 
+        class="input-info" 
+        placeholder="Имя" 
+        v-model="first_name"
+        required
+        />
+        <input 
+        class="input-info"
+        placeholder="Фамилия"
+        v-model="last_name"
+        required 
+        />
+        <!--<el-input class="inputInfo" placeholder="Почта" v-model="email"  />
+        <el-input class="inputInfo" placeholder="Телефон" v-model="phoneNumber"  />-->
+    </div>
     </form>
 <form method="post" enctype="multipart/form-data" style="width: 85%; margin-left: 20px;">
   <div id="dropZone" class="drop-zone" 
@@ -188,7 +200,7 @@ export default {
         @click="removeFile(index)" type="danger" plain  v-if="files.length !== 0">Удалить</el-button>
       </ul>
     </div>
-    <el-button plain @click="test" :disabled="!files.length" class="upload" type="success" style="margin-bottom: 20px;">Загрузить 
+    <el-button plain @click="uploadFiles" :disabled="!files.length" class="upload" type="success" style="margin-bottom: 20px;">Загрузить 
     </el-button>
   </div>
 </div>
@@ -203,6 +215,22 @@ export default {
   />
 </template>
 <style scoped>
+.user-name{
+    width: 100%;
+    margin-left: 20px;
+    top: 50%;
+    position: relative;
+    transform: translate(0%, -50%);
+}
+
+.input-info{
+    margin-top: 10px;
+    border-radius: 5px;
+    min-height: 30px;
+    text-align: center;
+    width: 80%;
+}
+
 .other-option{
   position: relative
 }
@@ -249,7 +277,7 @@ ul{
   box-shadow: 2px 2px 2px 2px gray;
   width: 90%;
   background-color: white;
-  height: calc(25em + 1vw + 1vh);
+  height: calc(20em + 1vw + 1vh);
   position: relative;
   text-align:center;
   display:flex;

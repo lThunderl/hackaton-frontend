@@ -1,3 +1,12 @@
+import { ElMessage } from "element-plus";
+
+const PORT = 8000;
+const HOST = process.env.VUE_APP_BACKEND_HOST || "localhost";
+
+const IP = `${HOST}:${PORT}`;
+
+const BASE_URL = `http://${IP}/resume`;
+
 export function dragOver(e) {
     e.preventDefault();
   }
@@ -58,9 +67,9 @@ export function dragOver(e) {
     }
 
     try {
-      const response = await fetch('http://localhost:8080/resumeconfirm', {
-        method: 'PUT',
-        body: JSON.stringify(user_info)
+      const response = await fetch(`${BASE_URL}/confirm`, {
+        method: "PUT",
+        body: JSON.stringify(user_info),
       });
 
       if (!response.ok) {
@@ -99,7 +108,7 @@ export function dragOver(e) {
   }
   export async function vacancyGet(){
     try{
-      const response = await fetch('http://localhost:8080/vacancy/all')
+      const response = await fetch(`http://${IP}/vacancy/all`)
       
       const data = response.JSON()
       console.log(data)
@@ -139,7 +148,7 @@ export function dragOver(e) {
       console.log(user_info)
 
       try {
-        const response = await fetch('http://localhost:8080/resume/read', {
+        const response = await fetch(`${BASE_URL}/read`, {
           method: 'POST',
           body: formData,
         });
@@ -153,7 +162,7 @@ export function dragOver(e) {
         return data
 
       } catch (error) {
-        return alert('Ошибка отправки данных');
+        return ElMessage('Ошибка отправки данных');
         
       } finally {
         componentContext.uploading = false;
@@ -161,6 +170,6 @@ export function dragOver(e) {
     } 
 
     else {
-      alert('Сначала необходимо заполнить поля: "Имя" и "Фамилия"');
+      ElMessage('Сначала необходимо заполнить поля: "Имя" и "Фамилия"');
   }
 }

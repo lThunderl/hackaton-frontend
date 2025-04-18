@@ -1,4 +1,4 @@
-FROM node:current-alpine3.21
+FROM node:22.14.0-alpine3.21
 
 RUN npm install -g http-server
 
@@ -9,8 +9,7 @@ COPY package*.json ./
 RUN npm install
 
 COPY . .
-
 RUN npm run build
 
 EXPOSE 8080
-CMD [ "http-server", "dist" ]
+CMD ["http-server", "dist", "-p", "8080"]
