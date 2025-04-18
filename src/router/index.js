@@ -1,6 +1,10 @@
 import {createRouter, createWebHistory} from 'vue-router';
-import VacancyList from '@/components/Lists/VacancyList.vue'
+
+import VacancyList from '@/components/VacancyViews/VacancyList.vue'
+import CreateVacancy from "@/components/VacancyViews/CreateVacancy.vue";
+import EditVacancy from "@/components/VacancyViews/EditVacancy.vue";
 import CandidatPage from '@/components/CandidatPage/CandidatPage.vue';
+
 
 const routes = [
     {
@@ -12,6 +16,17 @@ const routes = [
         path: '/hr-page',
         name: 'HRPage',
         component: VacancyList,
+    },
+    {
+        path: '/create-vacancy',
+        name: 'CreateVacancy',
+        component: CreateVacancy,
+    },
+    {
+        path: '/edit-vacancy/:id',
+        name: 'EditVacancy',
+        component: EditVacancy,
+        props: true,
     },
 ];
 
