@@ -1,11 +1,7 @@
 <script>
-import CandidateCard from './CandidateCard.vue';
 
 export default {
   name: 'VacancyCard',
-  components: {
-    CandidateCard,
-  },
   props: {
     vacancy: {
       type: Object,
@@ -28,18 +24,9 @@ export default {
       <div class="tag">
         <el-tag v-for="req in vacancy.requirements" :key="req" type="success">{{ req }}</el-tag>
       </div>
-      <div class="candidates">
-        <h4>Подходящие кандидаты:</h4>
-        <CandidateCard
-            v-for="candidate in candidates"
-            :key="candidate.id"
-            :candidate="candidate"
-        />
-        <slot name="actions"></slot>
-        <p v-if="candidates.length === 0">Кандидаты на эту вакансию не найдены.</p>
-      </div>
     </div>
   </el-card>
+
 </template>
 
 <style scoped>
@@ -47,6 +34,7 @@ export default {
   padding: 15px;
   margin-bottom: 20px;
   border-radius: 5px;
+  width: 30%
 }
 
 h3 {
@@ -54,12 +42,8 @@ h3 {
 }
 
 ul {
-  list-style-type: disc;
+  list-style-type: none;
   padding-left: 20px;
-}
-
-.candidates {
-  margin-top: 15px;
 }
 
 .tag {
