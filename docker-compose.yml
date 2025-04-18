@@ -1,0 +1,10 @@
+version: "3.8"
+name: Vue
+
+services:
+  vuejs:
+  
+    ports:
+      - 8081
+    environment:
+      - BACKEND_HOST: 'localhost'

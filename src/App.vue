@@ -1,14 +1,9 @@
 <template>
-  <DemoVue/>
+  <router-view/>
 </template>
 
 <script>
-import DemoVue from './components/DemoVue.vue'
-
 export default {
-  name: 'App',
-  components: {
-    DemoVue
-  }
-  }
+  name: 'App'
+}
 </script>
