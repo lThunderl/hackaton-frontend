@@ -1,16 +1,16 @@
 import {createRouter, createWebHistory} from 'vue-router';
 
-import DemoVue from "@/components/DemoVue.vue";
-
 import VacancyList from '@/components/VacancyViews/VacancyList.vue'
 import CreateVacancy from "@/components/VacancyViews/CreateVacancy.vue";
 import EditVacancy from "@/components/VacancyViews/EditVacancy.vue";
+import CandidatPage from '@/components/CandidatPage/CandidatPage.vue';
+
 
 const routes = [
     {
         path: '/',
         name: 'Home',
-        component: DemoVue,
+        component: CandidatPage,
     },
     {
         path: '/hr-page',
@@ -36,3 +36,4 @@ const router = createRouter({
 });
 
 export default router;
+
